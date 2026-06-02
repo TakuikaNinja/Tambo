@@ -58,6 +58,7 @@ tambo_initAPU:
 		ldy #REGION::NTSC
 		sty soundRegion
 @regionValid:
+		lda #$00
 		sta tickCounter
 		sta currentTrack
 		
@@ -138,6 +139,10 @@ tambo_soundUpdate:
 		stx $4017 ; manually tick APU frame counter to skip the 5th step
 		inx
 		stx tamboTemp
+		ldx tamboPauseStatus
+		bpl @runSound
+		rts
+@runSound:
 		ldx #$04
 		stx channelIndex
 @channelParseLoop:
@@ -248,6 +253,27 @@ updateDMC:
 		sta $4015
 
 tambo_tickCounters:
+		ldy soundRegion
+		lda tambo_tickRates,y
+		sta tamboTemp
+		ldx #$00
+		lda tickCounter
+		clc
+		adc #TEMPO
+		bcc @checkMod
+@modLoop:
+		sbc tamboTemp
+		inx
+@checkMod:
+		cmp tamboTemp
+		bcs @modLoop
+		
+@tickCounters:
+		sta tickCounter
+		stx tamboTemp
+		cpx #$00
+		beq @skip
+@adjust:
 		ldx #$04
 @tickLoop:
 		lda channelNoteCounters,x
@@ -256,6 +282,9 @@ tambo_tickCounters:
 @alreadyZero:
 		dex
 		bpl @tickLoop
+		dec tamboTemp
+		bne @adjust
+@skip:
 		rts
 
 ; handle any channel-specific features at key-on

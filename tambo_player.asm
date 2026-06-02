@@ -148,13 +148,17 @@ NMI:
 		sta PPU_CTRL
 
 ; raster time display using grayscale mode
-		lda PPU_MASK_MIRROR
-		pha
-		tax
+; but delay until around visible scanline 32 first
+		ldx PPU_MASK_MIRROR
 		inx
-		ldy #$80
+		ldy soundRegion
+		lda RasterDelays,y
+		tay
 @delay:
 		brk #$00 ; 13 cycles for each BRK+RTI
+		brk #$00
+		brk #$00
+		brk #$00
 		brk #$00
 		dey
 		bne @delay
@@ -164,7 +168,7 @@ NMI:
 		jsr tambo_soundUpdate
 
 ; restore state
-		pla
+		lda PPU_MASK_MIRROR
 		sta PPU_MASK
 		
 		pla
@@ -174,6 +178,10 @@ NMI:
 		pla
 IRQ:
 		rti
+
+; approximate delays to start at visible scanline 32
+RasterDelays:
+	.byte $49, $90, $49
 
 HandleControllersAndPPU:
 		lda soundRegion

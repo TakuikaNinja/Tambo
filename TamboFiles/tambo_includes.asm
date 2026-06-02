@@ -8,6 +8,8 @@
 	BAD
 .endenum
 
+TEMPO = 150
+
 ; Note indicies
 A0  = 0
 AS0 = 1
