@@ -138,6 +138,7 @@ NMI:
 		
 		lda PPU_MASK_MIRROR
 		sta PPU_MASK
+		dec NeedPPUMask
 		
 @setScroll:
 		lda #$00
@@ -317,6 +318,9 @@ HandleGameMode:
 		sta currentTrack
 		jsr tambo_playTrack
 		jsr InitPalettes
+		lda #%00001010 ; enable BG rendering
+		sta PPU_MASK_MIRROR
+		inc NeedPPUMask
 		inc Mode
 :
 		rts

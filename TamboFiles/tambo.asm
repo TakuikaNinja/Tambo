@@ -321,10 +321,17 @@ tambo_readNote:
 		ldx channelIndex
 		lda channelNoteCounters,x ; wait until counter becomes 0
 		bne @noNewNote
-
+		
+		lda channelNotePointers_Hi,x ; (avoid reading a stale pattern command)
+		bpl @noNewNote
+		
 		jsr fetchNote
-		bne @newNote
-		jsr tambo_readPattern ; if 0, read the next pattern
+		bne @newNote ; and proceed if duration is nonzero
+		
+		jsr tambo_readPattern ; if duration is 0, read the next pattern
+		lda channelNotePointers_Hi,x ; (avoid reading a stale pattern command)
+		bpl @noNewNote
+		
 		jsr fetchNote ; fetch its first note
 		bne @newNote ; and only proceed if duration is nonzero
 		rts ; (otherwise treat as end of song for that channel)
