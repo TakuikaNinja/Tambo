@@ -242,7 +242,7 @@ updateDMC:
 		lda dmcMirrors+2
 		sta $4012
 		lda dmcMirrors+3
-		sta $4015
+		sta $4013
 		; (re)trigger DMC DMA
 		lda #$1f
 		sta $4015
