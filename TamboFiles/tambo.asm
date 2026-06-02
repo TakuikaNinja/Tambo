@@ -264,7 +264,7 @@ tambo_tickCounters:
 		ldy soundRegion
 		lda tambo_tickRates,y
 		sta tamboTemp
-		ldy #$00
+		ldy speedCounter
 		lda tickCounter
 		clc
 		adc #TEMPO
@@ -275,14 +275,10 @@ tambo_tickCounters:
 @checkMod:
 		cmp tamboTemp
 		bcs @modLoop
-		
 @tickCounters:
 		sta tickCounter
-		sty tamboTemp
-		lda speedCounter
-		clc
-		adc tamboTemp
-		sta speedCounter
+		sty speedCounter
+		tya
 		cmp speedSetting
 		bcc @skip
 		sbc speedSetting
