@@ -8,7 +8,7 @@
 	BAD
 .endenum
 
-; Notes indicies
+; Note indicies
 A0  = 0
 AS0 = 1
 B0  = 2
