@@ -325,9 +325,7 @@ tambo_readPattern:
 		lda (pointer16),y
 		sta channelPatternPointers_Hi,x
 		; then refetch pattern
-		jsr fetchPattern
-		bmi @updatePatternPointer ; and only proceed if not a pattern effect
-		rts ; (otherwise treat as end of song for that channel)
+		jmp tambo_readPattern
 		
 @updatePatternPointer:
 		tya

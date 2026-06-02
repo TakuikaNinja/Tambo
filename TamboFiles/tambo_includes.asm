@@ -15,8 +15,9 @@ TEMPO = 150
 ; the low byte of the address defines the command (high byte is unused)
 ; 
 ; Command specifications:
-; - END is defined as $00 in the low byte ($xx00)
-; - JUMP is defined as $ff in the low byte ($xxff)
+; - END is defined as $00 in the low byte ($xx00), this ends channel processing
+; - JUMP is defined as $ff in the low byte ($xxff), this jumps to a new pattern
+;   - Example: .word CMD::JUMP, new_pattern
 ; - for all other commands, do NOT rely on the exact values specified here
 ; - commands commented out below are reserved for future versions
 .enum CMD
