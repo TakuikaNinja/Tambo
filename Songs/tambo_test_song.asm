@@ -1,22 +1,9 @@
-tambo_maxTracks:
-	.byte 1
-
-;tambo_maxSFX:
-;	.byte 1
-
-trackHeaders_Lo:
-	.byte <testsong_header
-trackHeaders_Hi:
-	.byte >testsong_header
-
-
 testsong_header:
 	.word testsong_pulse1
 	.word testsong_pulse2
 	.word testsong_triangle
 	.word testsong_noise
 	.word testsong_dmc
-
 
 testsong_pulse1:
 testsong_dmc:

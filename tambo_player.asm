@@ -322,7 +322,9 @@ HandleGameMode:
 		rts
 
 	.include "TamboFiles/tambo.asm"
+	.include "Songs/tambo_static.asm"
 	.include "Songs/tambo_test_song.asm"
+
 
 .segment "VECTORS"
 	.addr NMI

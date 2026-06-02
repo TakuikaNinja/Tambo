@@ -46,15 +46,15 @@ tambo_initAPU:
  		ldx #%11001111
  		stx $4015 ; enable APU channels except DMC (low 4 bits)
  		stx $4017 ; 5-step mode, disable IRQs (high 2 bits)
+ 		stx tamboPauseStatus ; in case updateSound runs before playTrack
  		
  		; fall back to NTSC tempo/pitch for bad region settings (e.g. overclocked emulators)
  		ldy soundRegion
  		cpy #REGION::BAD
- 		bcc :+
+ 		bcc @regionValid
 		ldy #REGION::NTSC
 		sty soundRegion
-:
-		stx tamboPauseStatus ; set bit 7 to stop playback (just in case)
+@regionValid:
 		sta tickCounter
 		sta currentTrack
 		
@@ -112,7 +112,6 @@ tambo_playTrack:
 
 		lda #$00
 		sta tickCounter
-		lda #$0f
 		sta tamboPauseStatus
 @pullXY:
 		pla
@@ -197,7 +196,10 @@ updateDMC:
 		lda channelKeyOn+4
 		beq tambo_tickCounters
 		dec channelKeyOn+4
+		lda #$0f ; preemptively mute DMC
+		sta $4015
 		lda dmcMirrors
+		bmi tambo_tickCounters ; bit 7 set = keep DMC muted
 		sta $4010
 		lda dmcMirrors+1
 		bmi @skipDirectLoad ; bit 7 set = skip direct load
@@ -208,8 +210,6 @@ updateDMC:
 		lda dmcMirrors+3
 		sta $4015
 		; (re)trigger DMC DMA
-		lda #$0f
-		sta $4015
 		lda #$1f
 		sta $4015
 
@@ -217,9 +217,9 @@ tambo_tickCounters:
 		ldx #$04
 @tickLoop:
 		lda channelNoteCounters,x
-		beq :+
+		beq @alreadyZero
 		dec channelNoteCounters,x
-:
+@alreadyZero:
 		dex
 		bpl @tickLoop
 		rts
@@ -249,13 +249,12 @@ noteLookup:
 		lda periodTableLo,y
 		sta apuMirrors,x
 		inx
-		lda #$00
 		cpy #32 ; high period byte is always 0 past this note
-		bcs :+
+		bcs @skipHighPeriod ; (assume length counter value contains that 0)
 		lda periodTableHi,y
-:
 		ora apuMirrors,x ; combine with length counter
 		sta apuMirrors,x
+@skipHighPeriod:
 		rts
 
 fetchPattern:
@@ -317,15 +316,15 @@ tambo_readNote:
 		ldx channelIndex
 		lda channelNoteCounters,x ; wait until counter becomes 0
 		bne @noNewNote
-		
+
 		jsr fetchNote
-		bne :+
-		
+		bne @newNote
 		jsr tambo_readPattern ; if 0, read the next pattern
 		jsr fetchNote ; fetch its first note
-		bne :+ ; and only proceed if duration is nonzero
+		bne @newNote ; and only proceed if duration is nonzero
 		rts ; (otherwise treat as end of song for that channel)
-:
+
+@newNote:
 		sta channelNoteCounters,x
 
 		; copy the next 4 bytes into the APU reg mirrors
