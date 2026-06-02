@@ -322,7 +322,7 @@ InitPalettes:
 HandleGameMode:
 		lda Mode
 		bne :+
-;		lda #$00
+		lda #$01
 		sta currentTrack
 		jsr tambo_playTrack
 		jsr InitPalettes
@@ -336,7 +336,7 @@ HandleGameMode:
 	.include "TamboFiles/tambo.asm"
 	.include "Songs/tambo_static.asm"
 	.include "Songs/tambo_test_song.asm"
-
+	.include "Songs/apu_dance.asm"
 
 .segment "VECTORS"
 	.addr NMI

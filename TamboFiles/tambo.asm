@@ -177,7 +177,7 @@ tambo_soundUpdate:
 		lda periodTableLo,y
 		sta apuMirrors,x
 		inx
-		cpy #32 ; high period byte is always 0 past this note
+		cpy #36 ; high period byte is always 0 past this note
 		bcs @skipHighPeriod ; (assume length counter value contains that 0)
 		lda periodTableHi,y
 		ora apuMirrors,x ; combine with length counter
