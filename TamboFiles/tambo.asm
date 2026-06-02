@@ -159,15 +159,20 @@ tambo_soundUpdate:
 		asl a
 		tax
 		lda apuMirrors,x
-		ldy soundRegion ; transpose based on the region
-		adc tambo_noteAdjustments,y ; assume carry always clear
-		cmp #NOTE_CEILING ; check that note doesn't exceed table
+		cmp #REST ; check for rest note
 		bcc @validNote
+		
+@invalidNote:
 		ldx channelIndex
-		dec channelKeyOn,x ; otherwise forcefully key-off
+		dec channelKeyOn,x ; forcefully key-off
 		beq @skipHighPeriod ; [unconditional branch]
 
 @validNote:
+		ldy soundRegion ; transpose based on the region
+		adc tambo_noteAdjustments,y ; [carry always clear]
+		cmp #NOTE_CEILING ; check the transposed result is within bounds
+		bcs @invalidNote ; otherwise forcefully key-off
+		
 		tay
 		lda periodTableLo,y
 		sta apuMirrors,x
