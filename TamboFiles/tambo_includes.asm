@@ -10,6 +10,23 @@
 
 TEMPO = 150
 
+; Pattern commands
+; commands are identified by a pattern address < $8000
+; the low byte of the address defines the command (high byte is unused)
+; 
+; Command specifications:
+; - END is defined as $00 in the low byte ($xx00)
+; - JUMP is defined as $ff in the low byte ($xxff)
+; - for all other commands, do NOT rely on the exact values specified here
+; - commands commented out below are reserved for future versions
+.enum CMD
+	END = $0000
+;	TRANSPOSE
+;	SET_LOOP
+;	LOOP_JUMP
+	JUMP = $00ff
+.endenum
+
 ; Note indicies
 A0  = 0
 AS0 = 1

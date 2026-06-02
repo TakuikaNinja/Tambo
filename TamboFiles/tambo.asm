@@ -287,10 +287,6 @@ tambo_tickCounters:
 @skip:
 		rts
 
-; handle any channel-specific features at key-on
-; (mainly looking up notes in pulse/triangle)
-
-
 fetchPattern:
 		ldx channelIndex
 		lda channelPatternPointers_Lo,x
@@ -311,11 +307,13 @@ tambo_readPattern:
 		jsr fetchPattern
 		bmi @updatePatternPointer
 		
-		ora channelNotePointers_Lo,x
-		beq @endOfSong ; $0000 = end song (for that channel)
+		; address < $8000 means this is a pattern command
+		lda channelNotePointers_Lo,x ; read command ID
+		beq @endOfSong ; $xx00 = end song (for that channel)
+		cmp #<CMD::JUMP ; $xxff = pattern jump
+		bne @endOfSong ; treat all remaining commands as "end song" for now
 		
-		; treat all remaining commands as jumps for now
-		; (setting a new pattern pointer)
+		; JUMP: fetch next 2 bytes & set as new pattern pointer
 		lda (pointer16),y
 		sta channelPatternPointers_Lo,x
 		iny
