@@ -6,6 +6,8 @@
 	
 	tamboPauseStatus: .res 1
 	tickCounter: .res 1
+	speedSetting: .res 1
+	speedCounter: .res 1
 	
 	currentTrack: .res 1
 ;	currentSFX: .res 1

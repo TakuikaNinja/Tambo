@@ -4,9 +4,10 @@ tambo_maxTracks:
 ;	.byte 1
 
 trackHeaders_Lo:
-	.byte <testsong_header
 	.byte <apu_dance_header
+	.byte <testsong_header
+
 trackHeaders_Hi:
-	.byte >testsong_header
 	.byte >apu_dance_header
+	.byte >testsong_header
 

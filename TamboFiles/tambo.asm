@@ -59,7 +59,6 @@ tambo_initAPU:
 		sty soundRegion
 @regionValid:
 		lda #$00
-		sta tickCounter
 		sta currentTrack
 		
 tambo_initRAM:
@@ -70,6 +69,9 @@ tambo_initRAM:
 		sta channelNoteCounters,x
 		dex
 		bpl @loop
+		sta tickCounter
+		sta speedCounter
+		sta speedSetting
  		rts
 
 tambo_playTrack:
@@ -92,8 +94,11 @@ tambo_playTrack:
 		lda trackHeaders_Hi,y
 		sta pointer16+1
 		lda #$00
-		tay
 		tax
+		tay
+		lda (pointer16),y ; speed setting
+		sta speedSetting
+		iny
 		
 @headerLoadLoop:
 		lda (pointer16),y
@@ -115,7 +120,6 @@ tambo_playTrack:
 		bpl @notePointerLoadLoop
 
 		lda #$00
-		sta tickCounter
 		sta tamboPauseStatus
 @pullXY:
 		pla
@@ -135,11 +139,7 @@ tambo_setPauseStatus:
 		rts
 
 tambo_soundUpdate:
-		ldx #$ff
-		stx $4017 ; manually tick APU frame counter to skip the 5th step
-		inx
-		stx tamboTemp
-		ldx tamboPauseStatus
+		lda tamboPauseStatus
 		bpl @runSound
 		rts
 @runSound:
@@ -188,6 +188,7 @@ tambo_soundUpdate:
 		bpl @channelParseLoop
 		
 tambo_updateAPU:
+		ldx #$ff ; manually tick APU frame counter to skip the 5th step
 updatePulse1:
 		lda channelKeyOn
 		beq updatePulse2
@@ -196,6 +197,7 @@ updatePulse1:
 		sta $4000
 		lda pulse1Mirrors+1
 		sta $4001
+		stx $4017
 		lda pulse1Mirrors+2
 		sta $4002
 		lda pulse1Mirrors+3
@@ -209,6 +211,7 @@ updatePulse2:
 		sta $4004
 		lda pulse2Mirrors+1
 		sta $4005
+		stx $4017
 		lda pulse2Mirrors+2
 		sta $4006
 		lda pulse2Mirrors+3
@@ -261,34 +264,37 @@ tambo_tickCounters:
 		ldy soundRegion
 		lda tambo_tickRates,y
 		sta tamboTemp
-		ldx #$00
+		ldy #$00
 		lda tickCounter
 		clc
 		adc #TEMPO
 		bcc @checkMod
 @modLoop:
 		sbc tamboTemp
-		inx
+		iny
 @checkMod:
 		cmp tamboTemp
 		bcs @modLoop
 		
 @tickCounters:
 		sta tickCounter
-		stx tamboTemp
-		cpx #$00
-		beq @skip
-@adjust:
+		sty tamboTemp
+		lda speedCounter
+		clc
+		adc tamboTemp
+		sta speedCounter
+		cmp speedSetting
+		bcc @skip
+		sbc speedSetting
+		sta speedCounter
 		ldx #$04
-@tickLoop:
+@channelLoop:
 		lda channelNoteCounters,x
 		beq @alreadyZero
 		dec channelNoteCounters,x
 @alreadyZero:
 		dex
-		bpl @tickLoop
-		dec tamboTemp
-		bne @adjust
+		bpl @channelLoop
 @skip:
 		rts
 

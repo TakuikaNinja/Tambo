@@ -322,7 +322,7 @@ InitPalettes:
 HandleGameMode:
 		lda Mode
 		bne :+
-		lda #$01
+;		lda #$00
 		sta currentTrack
 		jsr tambo_playTrack
 		jsr InitPalettes
