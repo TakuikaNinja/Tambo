@@ -96,10 +96,10 @@ Reset:
 		sta PPU_CTRL_MIRROR
 		sta PPU_CTRL
 Main:
-		jsr WaitForNMI
 		jsr CheckButtonPresses
 		jsr HandleGameMode
-		jmp Main
+		jsr WaitForNMI
+		beq Main ; [unconditional branch]
 
 WaitForNMI:
 		inc NMIReady
