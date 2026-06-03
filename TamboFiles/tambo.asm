@@ -139,8 +139,11 @@ tambo_setPauseStatus:
 		rts
 
 tambo_soundUpdate:
+		lda speedSetting ; 0 usually means we haven't called playTrack yet
+		beq @invalidSpeed
 		lda tamboPauseStatus
 		bpl @runSound
+@invalidSpeed:
 		rts
 @runSound:
 		ldx #$04
