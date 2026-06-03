@@ -189,6 +189,7 @@ tambo_soundUpdate:
 		
 tambo_updateAPU:
 		ldx #$ff ; manually tick APU frame counter to skip the 5th step
+		stx $4017
 updatePulse1:
 		lda channelKeyOn
 		beq updatePulse2
@@ -264,25 +265,32 @@ tambo_tickCounters:
 		ldy soundRegion
 		lda tambo_tickRates,y
 		sta tamboTemp
-		ldy speedCounter
+		ldy #$00
 		lda tickCounter
 		clc
 		adc #TEMPO
-		bcc @checkMod
-@modLoop:
+		bcc @checkTempoMod
+@tempoModLoop:
 		sbc tamboTemp
 		iny
-@checkMod:
+@checkTempoMod:
 		cmp tamboTemp
-		bcs @modLoop
-@tickCounters:
+		bcs @tempoModLoop
 		sta tickCounter
-		sty speedCounter
 		tya
-		cmp speedSetting
-		bcc @skip
+		clc
+		adc speedCounter
+		ldy #$00
+		bcc @checkSpeedMod
+@speedModLoop:
 		sbc speedSetting
+		iny
+@checkSpeedMod:
+		cmp speedSetting
+		bcs @speedModLoop
 		sta speedCounter
+		cpy #$00
+		beq @skip
 		ldx #$04
 @channelLoop:
 		lda channelNoteCounters,x
