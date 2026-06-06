@@ -19,14 +19,13 @@ apu_dance_dmc_init:
 	.byte 0
 
 apu_dance_blank_pattern:
-	.byte 16, 0, 0, CUT, 0
+	.byte 32, 0, 0, CUT, 0
 	.byte 0
 
 apu_dance_pulse1:
-	.word CMD::SET_LOOP | (5 << 8)
-apu_dance_pulse1_intro:
 	.word apu_dance_blank_pattern
-	.word CMD::LOOP_JUMP, apu_dance_pulse1_intro
+	.word apu_dance_blank_pattern
+	.word apu_dance_blank_pattern
 	
 	.word apu_dance_pulse1_pattern0
 	.word apu_dance_pulse1_pattern1
@@ -37,10 +36,6 @@ apu_dance_pulse1_intro:
 	.word apu_dance_pulse1_pattern3
 	.word apu_dance_pulse1_pattern2
 
-	.word apu_dance_blank_pattern
-	.word apu_dance_blank_pattern
-	.word apu_dance_blank_pattern
-	.word apu_dance_blank_pattern
 	.word apu_dance_pulse1_tom
 	
 	.word apu_dance_pulse1_pattern0
@@ -60,10 +55,6 @@ apu_dance_pulse1_intro:
 	.word apu_dance_pulse1_pattern5
 	.word apu_dance_pulse1_pattern7
 	
-	.word apu_dance_blank_pattern
-	.word apu_dance_blank_pattern
-	.word apu_dance_blank_pattern
-	.word apu_dance_blank_pattern
 	.word apu_dance_pulse1_tom
 
 	.word CMD::JUMP, apu_dance_pulse1
@@ -112,6 +103,7 @@ apu_dance_pulse1_pattern3:
 	.byte 0
 
 apu_dance_pulse1_tom:
+	.byte 16*4, 0, 0, CUT, 0
 	.byte 2, $80, $83, AS3, $01 << 3
 	.byte 2, $80, $83, AS3, $01 << 3
 	.byte 3, $80, $83, AS3, $01 << 3
@@ -279,7 +271,6 @@ apu_dance_pulse2_pattern1:
 	.byte 0
 
 apu_dance_triangle:
-	.word apu_dance_blank_pattern
 	.word apu_dance_blank_pattern
 	
 	.word CMD::SET_LOOP | (12 << 8)
