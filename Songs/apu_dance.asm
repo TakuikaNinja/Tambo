@@ -11,11 +11,11 @@ apu_dance_dmc:
 	.word CMD::END
 
 apu_dance_dmc_init:
-	.byte 1, $80, $00, $00, $00 ; mute channel
+	.byte 1, $80, $00, $00, $00 ; mute channel by setting $4010.D7
 	.byte 0
 
 apu_dance_blank_pattern:
-	.byte 16, 0, 0, REST, 0
+	.byte 16, 0, 0, CUT, 0
 	.byte 0
 
 apu_dance_pulse1:
@@ -28,8 +28,18 @@ apu_dance_pulse1_invalid:
 	.byte 0
 
 apu_dance_pulse2:
+	.word CMD::SET_LOOP | (7 << 8)
+@intro:
+	.word apu_dance_pulse2_kick
+	.word CMD::LOOP_JUMP, @intro
+	
+	.word apu_dance_pulse2_pattern0
 	.word apu_dance_pulse2_pattern0
 	.word CMD::JUMP, apu_dance_pulse2
+
+apu_dance_pulse2_kick:
+	.byte 4, $80, $81, C3, $07 << 3
+	.byte 0
 
 apu_dance_pulse2_pattern0:
 	.byte 2, $80, $81, C3, $07 << 3
@@ -54,6 +64,10 @@ apu_dance_pulse2_pattern0:
 	.byte 0
 
 apu_dance_triangle:
+	.word apu_dance_blank_pattern
+	.word apu_dance_blank_pattern
+	
+	.word apu_dance_triangle_pattern0
 	.word apu_dance_triangle_pattern0
 	.word CMD::JUMP, apu_dance_triangle
 
@@ -73,6 +87,9 @@ apu_dance_triangle_pattern0:
 	.byte 0
 
 apu_dance_noise:
+	.word apu_dance_noise_pattern0
+	.word apu_dance_noise_pattern1
+	
 	.word apu_dance_noise_pattern0
 	.word apu_dance_noise_pattern0
 	.word apu_dance_noise_pattern0

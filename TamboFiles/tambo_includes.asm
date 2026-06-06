@@ -8,23 +8,49 @@
 	BAD
 .endenum
 
+; equivalent to FamiTracker's Tempo mode tempo
 TEMPO = 150
 
 ; Pattern commands
 ; commands are identified by a pattern address < $8000
 ; the low byte of the address defines the command (high byte is unused)
-; 
 ; Command specifications:
-; - END is defined as $00 in the low byte ($xx00), this ends channel processing
-; - JUMP is defined as $ff in the low byte ($xxff), this jumps to a new pattern
-;   - Example: .word CMD::JUMP, new_pattern
-; - for all other commands, do NOT rely on the exact values specified here
-; - commands commented out below are reserved for future versions
+
+; END is defined as $00 in the low byte ($xx00), this ends channel processing
+; this is most often used to end playback for unused channels,
+; or to end a non-looping track
+
+; JUMP is defined as $ff in the low byte ($xxff), this jumps to a new pattern
+; Example: .word CMD::JUMP, new_pattern
+; this is most often used for infinite loops
+
+; loop commands
+; SET_LOOP sets that channel's loop counter to the value in the high byte
+; Example: .word CMD::SET_LOOP | (loop_count << 8) ; loop_count is 0-127
+;
+; LOOP_JUMP checks that channel's loop counter:
+; - if 0, progress to the next pattern address
+; - otherwise, decrement the loop counter and perform a JUMP
+; Example: .word CMD::LOOP_JUMP, new_pattern
+;
+; this combination is often used for finite loops, such as:
+; 
+;	apu_dance_pulse2:
+;		.word CMD::SET_LOOP | (7 << 8)
+;	@intro:
+;		.word apu_dance_pulse2_kick
+;		.word CMD::LOOP_JUMP, @intro
+;		.word CMD::END
+;
+; in this example, apu_dance_pulse2_kick will play (7 + 1 = 8) times
+
+; For commands other than END and JUMP, do NOT rely on the exact values
+; commands commented out below are reserved for future versions
 .enum CMD
 	END = $0000
 ;	TRANSPOSE
-;	SET_LOOP
-;	LOOP_JUMP
+	SET_LOOP = $00fd
+	LOOP_JUMP = $00fe
 	JUMP = $00ff
 .endenum
 

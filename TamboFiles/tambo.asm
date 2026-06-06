@@ -67,6 +67,7 @@ tambo_initRAM:
 @loop:
 		sta channelKeyOn,x
 		sta channelNoteCounters,x
+		sta channelLoopCounters,x
 		dex
 		bpl @loop
 		sta tickCounter
@@ -337,17 +338,43 @@ fetchPattern:
 		cmp #$00 ; pattern addresses < $8000 are pattern commands
 		rts
 
+refetchPattern:
+		jsr updatePatternPointer ; then fall through to pattern refetch
+		
 tambo_readPattern:
 		jsr fetchPattern
-		bmi @updatePatternPointer
+		bmi updatePatternPointer
 		
 		; address < $8000 means this is a pattern command
 		lda channelNotePointers_Lo,x ; read command ID
-		beq @endOfSong ; $xx00 = end song (for that channel)
+		beq endOfSong ; $xx00 = end song (for that channel)
+		
 		cmp #<CMD::JUMP ; $xxff = pattern jump
-		bne @endOfSong ; treat all remaining commands as "end song" for now
+		beq @patternJump
+		
+		cmp #<CMD::LOOP_JUMP
+		beq @checkLoopCounter
+		
+		cmp #<CMD::SET_LOOP
+		bne endOfSong ; treat all remaining commands as "end song" for now
+
+@setLoopCounter:
+		lda channelNotePointers_Hi,x ; high byte = loop counter value
+		sta channelLoopCounters,x
+		jmp refetchPattern
+		
+@checkLoopCounter:
+		lda channelLoopCounters,x
+		bne @decLoopCounter
+		iny ; if loop counter = 0, progress to next pattern
+		iny
+		jmp refetchPattern
+		
+@decLoopCounter:
+		dec channelLoopCounters,x ; then fall through to handling the jump
 		
 		; JUMP: fetch next 2 bytes & set as new pattern pointer
+@patternJump:
 		lda (pointer16),y
 		sta channelPatternPointers_Lo,x
 		iny
@@ -356,7 +383,7 @@ tambo_readPattern:
 		; then refetch pattern
 		jmp tambo_readPattern
 		
-@updatePatternPointer:
+updatePatternPointer:
 		tya
 		clc
 		adc channelPatternPointers_Lo,x
@@ -364,7 +391,7 @@ tambo_readPattern:
 		lda channelPatternPointers_Hi,x
 		adc #$00
 		sta channelPatternPointers_Hi,x
-@endOfSong:
+endOfSong:
 		rts
 
 fetchNote:

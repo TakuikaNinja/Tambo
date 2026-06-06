@@ -20,7 +20,7 @@ testsong_dmc:
 	.word CMD::END
 
 testsong_dmc_init:
-	.byte 1, $80, $00, $00, $00 ; mute channel
+	.byte 1, $80, $00, $00, $00 ; mute channel by setting $4010.D7
 	.byte 0
 
 testsong_pulse2:
