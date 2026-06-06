@@ -346,9 +346,12 @@ HandleGameMode:
 		rts
 
 	.include "TamboFiles/tambo.asm"
+	.out .sprintf ("Tambo driver: %d bytes", *-periodTableLo)
+	
 	.include "Songs/tambo_static.asm"
 	.include "Songs/tambo_test_song.asm"
 	.include "Songs/apu_dance.asm"
+	.out .sprintf ("Sound data: %d bytes", *-tambo_maxTracks)
 
 .segment "VECTORS"
 	.addr NMI
