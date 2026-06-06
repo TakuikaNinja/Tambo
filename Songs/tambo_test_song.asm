@@ -11,8 +11,8 @@ testsong_pulse1:
 	.word CMD::END
 
 testsong_pulse1_invalid:
-	.byte 4, $80, $83, $ff, $07 << 3 ; invalid note (ignored)
-	.byte 4, $80, $83, $ff, $01 << 3 ; same here
+	.byte 4, $80, $83, CUT, $07 << 3 ; note cut (i.e. mute channel)
+	.byte 4, $80, $83, $ff, $01 << 3 ; invalid note (same as note cut)
 	.byte 0
 
 testsong_dmc:

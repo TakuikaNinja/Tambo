@@ -3,6 +3,7 @@
 ; zeropage
 .segment "ZEROPAGE"
 	temp: .res 16 ; temp memory
+	NMISoftDisable: .res 1
 	NMIReady: .res 1
 	NeedDraw: .res 1
 	NeedPPUMask: .res 1

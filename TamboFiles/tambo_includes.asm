@@ -116,7 +116,6 @@ GS7 = 83
 A7  = 84
 AS7 = 85
 B7  = 86
-REST  = 87
-
-NOTE_CEILING        = 88
+REST = 87
+CUT = 88
 

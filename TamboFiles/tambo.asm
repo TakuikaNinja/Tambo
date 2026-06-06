@@ -155,6 +155,8 @@ tambo_soundUpdate:
 		beq @noHandler
 		cpx #$3
 		bcs @noHandler
+		
+; note lookup for pulse/triangle
 @noteLookup:
 		txa
 		sec
@@ -163,19 +165,33 @@ tambo_soundUpdate:
 		tax
 		lda apuMirrors,x
 		cmp #REST ; check for rest note
+		beq @restNote
+		cmp #CUT ; check for note cut
 		bcc @validNote
 		
-@invalidNote:
+; only pulse/triangle get note cut support
+; (noise/DMC need explicit muting within song data)
+@noteCut:
+		dex ; X = channelIndex * 4
+		dex
+		ldy #$00
+@initChannelLoop:
+		lda tambo_registerInitTable,x
+		sta apuMirrors,x
+		inx
+		iny
+		cpy #$04
+		bcc @initChannelLoop
+		bcs @noHandler ; [unconditional branch]
+		
+@restNote:
 		ldx channelIndex
 		dec channelKeyOn,x ; forcefully key-off
-		beq @skipHighPeriod ; [unconditional branch]
+		beq @noHandler ; [unconditional branch]
 
 @validNote:
 		ldy soundRegion ; transpose based on the region
-		adc tambo_noteAdjustments,y ; [carry always clear]
-		cmp #NOTE_CEILING ; check the transposed result is within bounds
-		bcs @invalidNote ; otherwise forcefully key-off
-		
+		adc tambo_noteAdjustments,y ; carry already clear
 		tay
 		lda periodTableLo,y
 		sta apuMirrors,x

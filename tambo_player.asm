@@ -128,6 +128,9 @@ NMI:
 		tya
 		pha
 		
+		bit NMISoftDisable
+		bmi @soundOnly
+		
 		lda NMIReady
 		beq @setScroll
 		dec NMIReady
@@ -149,6 +152,7 @@ NMI:
 
 ; raster time display using grayscale mode
 ; but delay until around visible scanline 32 first
+@soundOnly:
 		ldx PPU_MASK_MIRROR
 		inx
 		ldy soundRegion
@@ -322,14 +326,22 @@ InitPalettes:
 HandleGameMode:
 		lda Mode
 		bne :+
-;		lda #$00
-		sta currentTrack
-		jsr tambo_playTrack
 		jsr InitPalettes
 		lda #%00001010 ; enable BG rendering
 		sta PPU_MASK_MIRROR
 		inc NeedPPUMask
 		inc Mode
+		lda #$00
+		sta currentTrack
+		jmp tambo_playTrack
+:
+		lda P1_PRESSED
+		and #(BUTTON_LEFT | BUTTON_RIGHT)
+		beq :+
+		lda currentTrack
+		eor #1
+		sta currentTrack
+		jmp tambo_playTrack
 :
 		rts
 
