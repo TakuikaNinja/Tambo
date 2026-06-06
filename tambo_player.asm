@@ -343,6 +343,16 @@ HandleGameMode:
 		sta currentTrack
 		jmp tambo_playTrack
 :
+		lda P1_PRESSED
+		and #BUTTON_SELECT
+		beq :+
+		jmp tambo_stopTrack
+:
+		lda P1_PRESSED
+		and #BUTTON_START
+		beq :+
+		jmp tambo_pauseTrack
+:
 		rts
 
 	.include "TamboFiles/tambo.asm"

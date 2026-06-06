@@ -38,8 +38,17 @@ tambo_registerInitTable:
 	.byte $30,$00,$00,$00
 	.byte $00,$00,$00,$00
 
-tambo_initAPU:
- 		ldy #$13
+; toggle pause state
+tambo_pauseTrack:
+		lda tamboPauseStatus
+		eor #$80
+		sta tamboPauseStatus
+		bmi initAPURegs	; but only mute upon setting pause
+@resume:
+		rts
+
+initAPURegs:
+		ldy #$13
 @loop:  lda tambo_registerInitTable,y
  		sta $4000,y
  		sta apuMirrors,y ; init register mirrors, too
@@ -49,7 +58,12 @@ tambo_initAPU:
  		ldx #%11001111
  		stx $4015 ; enable APU channels except DMC (low 4 bits)
  		stx $4017 ; 5-step mode, disable IRQs (high 2 bits)
- 		stx tamboPauseStatus ; in case updateSound runs before playTrack
+ 		rts
+
+tambo_stopTrack:
+tambo_initAPU:
+ 		jsr initAPURegs
+ 		stx tamboPauseStatus ; X has bit 7 set
  		
  		; fall back to NTSC tempo/pitch for bad region settings (e.g. overclocked emulators)
  		ldy soundRegion
@@ -129,23 +143,13 @@ tambo_playTrack:
 		tax
 		rts
 
-tambo_stopTrack:
-		lda #$80
-		bmi tambo_setPauseStatus
-
-tambo_pauseTrack:
-		lda #$00
-tambo_setPauseStatus:
-		sta tamboPauseStatus
-		rts
-
 tambo_soundUpdate:
+		bit tamboPauseStatus
+		bmi @exitSound
 		lda speedSetting ; 0 usually means we haven't called playTrack yet
-		beq @invalidSpeed
-		lda tamboPauseStatus
-		bpl @runSound
-@invalidSpeed:
-		rts
+		bne @runSound
+@exitSound:
+		rts ; TODO: should probably allow SFX updates
 @runSound:
 		ldx #$04
 		stx channelIndex
