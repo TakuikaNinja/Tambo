@@ -38,18 +38,37 @@ tambo_registerInitTable:
 	.byte $30,$00,$00,$00
 	.byte $00,$00,$00,$00
 
-; toggle pause state
+; toggle pause state for the currently playing track (clobbers A)
+; (currently playing SFX will be muted alongside track playback)
 tambo_pauseTrack:
 		lda tamboPauseStatus
 		eor #$80
 		sta tamboPauseStatus
-		bmi initAPURegs	; but only mute upon setting pause
+		bpl @resume	; but only mute upon setting pause
+		txa
+		pha
+		tya
+		pha
+		jsr initAPURegs ; clobbers AXY
+		jmp pullXY
 @resume:
 		rts
 
+; stop all audio (clobbers A)
+; (currently playing SFX will also be muted)
+tambo_stopTrack:
+		txa
+		pha
+		tya
+		pha
+		jmp initAPUThenPullXY
+
 initAPURegs:
+		lda #$00 ; mute everything including DMC
+		sta $4015 ; (avoids register activation bugs during the init loop)
 		ldy #$13
-@loop:  lda tambo_registerInitTable,y
+@loop:
+		lda tambo_registerInitTable,y
  		sta $4000,y
  		sta apuMirrors,y ; init register mirrors, too
  		dey
@@ -60,7 +79,6 @@ initAPURegs:
  		stx $4017 ; 5-step mode, disable IRQs (high 2 bits)
  		rts
 
-tambo_stopTrack:
 tambo_initAPU:
  		jsr initAPURegs
  		stx tamboPauseStatus ; X has bit 7 set
@@ -96,13 +114,14 @@ tambo_playTrack:
 		pha
 		ldy currentTrack
 		cpy tambo_maxTracks ; reject invalid track numbers
-		bcc @valid
+		bcc validTrack
 
-		jsr tambo_stopTrack
-		jmp @pullXY
+initAPUThenPullXY:
+		jsr tambo_initAPU
+		jmp pullXY
 
 ; if valid, load the initial pattern pointers from the header
-@valid:
+validTrack:
 		jsr tambo_initRAM
 		lda trackHeaders_Lo,y
 		sta pointer16
@@ -136,7 +155,7 @@ tambo_playTrack:
 
 		lda #$00
 		sta tamboPauseStatus
-@pullXY:
+pullXY:
 		pla
 		tay
 		pla
