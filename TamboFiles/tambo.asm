@@ -356,7 +356,10 @@ tambo_tickCounters:
 @skip:
 		rts
 
-fetchPattern:
+refetchPattern:
+		jsr updatePatternPointer ; then fall through to pattern refetch
+		
+tambo_readPattern:
 		ldx channelIndex
 		lda channelPatternPointers_Lo,x
 		sta pointer16
@@ -370,13 +373,6 @@ fetchPattern:
 		sta channelNotePointers_Hi,x
 		iny
 		cmp #$00 ; pattern addresses < $8000 are pattern commands
-		rts
-
-refetchPattern:
-		jsr updatePatternPointer ; then fall through to pattern refetch
-		
-tambo_readPattern:
-		jsr fetchPattern
 		bmi updatePatternPointer
 		
 		; address < $8000 means this is a pattern command
