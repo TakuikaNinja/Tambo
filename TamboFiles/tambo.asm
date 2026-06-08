@@ -444,13 +444,12 @@ tambo_readPattern:
 		jmp tambo_readPattern
 		
 updatePatternPointer:
-		tya
+		tya ; add Y to pointer so it points to the next pattern
 		clc
-		adc channelPatternPointers_Lo,x
+		adc pointer16
 		sta channelPatternPointers_Lo,x
-		lda channelPatternPointers_Hi,x
-		adc #$00
-		sta channelPatternPointers_Hi,x
+		bcc endOfSong
+		inc channelPatternPointers_Hi,x
 endOfSong:
 		rts
 
@@ -500,9 +499,9 @@ tambo_readNote:
 		clc
 		adc pointer16
 		sta channelNotePointers_Lo,x
-		lda pointer16+1
-		adc #$00
-		sta channelNotePointers_Hi,x
+		bcc @noCarry
+		inc channelNotePointers_Hi,x
+@noCarry:
 		inc channelKeyOn,x ; signal key on
 		rts
 
