@@ -333,7 +333,7 @@ HandleGameMode:
 		inc Mode
 		lda #$00
 		sta currentTrack
-		jmp tambo_playTrack
+		jsr tambo_playTrack
 :
 		lda P1_PRESSED
 		and #(BUTTON_LEFT | BUTTON_RIGHT)
@@ -341,17 +341,31 @@ HandleGameMode:
 		lda currentTrack
 		eor #1
 		sta currentTrack
-		jmp tambo_playTrack
+		jsr tambo_playTrack
 :
 		lda P1_PRESSED
 		and #BUTTON_SELECT
 		beq :+
-		jmp tambo_stopTrack
+		jsr tambo_stopTrack
 :
 		lda P1_PRESSED
 		and #BUTTON_START
 		beq :+
-		jmp tambo_pauseTrack
+		jsr tambo_pauseTrack
+:
+		lda P1_PRESSED
+		and #BUTTON_A
+		beq :+
+		lda #$00
+		sta currentSFX
+		jsr tambo_playSFX
+:
+		lda P1_PRESSED
+		and #BUTTON_B
+		beq :+
+		lda #$01
+		sta currentSFX
+		jsr tambo_playSFX
 :
 		rts
 
@@ -361,6 +375,7 @@ HandleGameMode:
 	.include "Songs/tambo_static.asm"
 	.include "Songs/tambo_test_song.asm"
 	.include "Songs/apu_dance.asm"
+	.include "Songs/tambo_sfx.asm"
 	.out .sprintf ("Sound data: %d bytes", *-tambo_maxTracks)
 
 .segment "VECTORS"

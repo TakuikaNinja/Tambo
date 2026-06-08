@@ -92,6 +92,7 @@ tambo_initAPU:
 @regionValid:
 		lda #$00
 		sta currentTrack
+		jsr initSFX
 		
 tambo_initRAM:
 		lda #$00
@@ -109,6 +110,79 @@ tambo_initRAM:
 		sta speedSetting
  		rts
 
+initSFX:
+		ldx #$01
+		jsr initSFXSlot
+		dex ; fall through to init slot 0
+
+initSFXSlot:
+		lda #$ff
+		sta sfxChannelIndexes,x ; negative value = free slot
+		lda #$00
+		sta sfxPointers_Lo,x
+		sta sfxPointers_Hi,x
+		sta sfxNoteCounters,x
+		rts
+
+; carry set = SFX failed to load
+tambo_playSFX:
+		txa
+		pha
+		tya
+		pha
+		ldy currentSFX
+		cpy tambo_maxSFX
+		bcc @checkChannelIndex
+@invalid:
+		sec
+		jmp pullXY
+		
+@checkChannelIndex:
+		lda sfxHeaders_Lo,y
+		sta pointer16
+		lda sfxHeaders_Hi,y
+		sta pointer16+1
+		ldy #$00
+		lda (pointer16),y ; channel index
+		cmp #$05
+		bcs @invalid
+		
+		; load to the first SFX slot already using that channel,
+		; otherwise pick the first free slot
+		; if both slots are in use, give up for now
+		; (since that would risk leaving a channel running)
+		ldx #$00 ; start at slot 0
+		cmp sfxChannelIndexes
+		beq @loadSFX ; slot 0 matches
+		inx
+		cmp sfxChannelIndexes+1
+		beq @loadSFX ; slot 1 matches
+		dex
+		bit sfxChannelIndexes
+		bmi @loadSFX ; slot 0 free
+		inx
+		bit sfxChannelIndexes+1
+		bpl @invalid ; slot 1 not free either? give up
+
+@loadSFX:
+		; set up the SFX slot
+		sta sfxChannelIndexes,x
+		lda #$00
+		sta sfxTransposition,x
+		sta sfxNoteCounters,x
+		sta sfxKeyOn,x
+		
+		lda pointer16 ; add 1 to account for channel index byte
+		clc
+		adc #$01
+		sta sfxPointers_Lo,x
+		lda pointer16+1
+		adc #$00
+		sta sfxPointers_Hi,x
+		clc
+		jmp pullXY
+
+; carry set = track failed to load
 tambo_playTrack:
 		txa
 		pha
@@ -157,6 +231,7 @@ validTrack:
 
 		lda #$00
 		sta tamboPauseStatus
+		clc
 pullXY:
 		pla
 		tay
@@ -166,11 +241,9 @@ pullXY:
 
 tambo_soundUpdate:
 		bit tamboPauseStatus
-		bmi @exitSound
+		bmi parseSFX
 		lda speedSetting ; 0 usually means we haven't called playTrack yet
-		bne @runSound
-@exitSound:
-		rts ; TODO: should probably allow SFX updates
+		beq parseSFX
 @runSound:
 		ldx #$04
 		stx channelIndex
@@ -182,60 +255,18 @@ tambo_soundUpdate:
 		cpx #$3
 		bcs @noHandler
 		
-; note lookup for pulse/triangle
-@noteLookup:
-		txa
-		sec
-		rol a ; channelIndex * 4 + 2
-		asl a
-		tax
-		lda apuMirrors,x
-		cmp #REST ; check for rest note
-		beq @restNote
-		cmp #CUT ; check for note cut
-		bcc @validNote
+		jsr noteLookup
 		
-; only pulse/triangle get note cut support
-; (noise/DMC need explicit muting within song data)
-@noteCut:
-		dex ; X = channelIndex * 4
-		dex
-		ldy #$00
-@initChannelLoop:
-		lda tambo_registerInitTable,x
-		sta apuMirrors,x
-		inx
-		iny
-		cpy #$04
-		bcc @initChannelLoop
-		bcs @noHandler ; [unconditional branch]
-		
-@restNote:
-		ldx channelIndex
-		dec channelKeyOn,x ; forcefully key-off
-		beq @noHandler ; [unconditional branch]
-
-@validNote:
-		ldy soundRegion ; transpose based on the region
-		adc tambo_noteAdjustments,y ; carry already clear
-		stx tamboTemp ; temporarily save offset into apuMirrors
-		ldx channelIndex
-		clc
-		adc channelTransposition,x ; apply transposition
-		tay
-		ldx tamboTemp
-		lda periodTableLo,y
-		sta apuMirrors,x
-		inx
-		cpy #36 ; high period byte is always 0 past this note
-		bcs @skipHighPeriod ; (assume length counter value contains that 0)
-		lda periodTableHi,y
-		ora apuMirrors,x ; combine with length counter
-		sta apuMirrors,x
-@skipHighPeriod:
 @noHandler:
 		dec channelIndex
 		bpl @channelParseLoop
+		
+parseSFX:
+		lda #$01
+		sta sfxSlot
+		jsr tambo_readSFX
+		dec sfxSlot
+		jsr tambo_readSFX
 		
 tambo_updateAPU:
 		ldx #$ff ; manually tick APU frame counter to skip the 5th step
@@ -244,6 +275,8 @@ updatePulse1:
 		lda channelKeyOn
 		beq updatePulse2
 		dec channelKeyOn
+		lda channelMuteStates
+		bne updatePulse2
 		lda pulse1Mirrors
 		sta $4000
 		lda pulse1Mirrors+1
@@ -258,6 +291,8 @@ updatePulse2:
 		lda channelKeyOn+1
 		beq updateTriangle
 		dec channelKeyOn+1
+		lda channelMuteStates+1
+		bne updateTriangle
 		lda pulse2Mirrors
 		sta $4004
 		lda pulse2Mirrors+1
@@ -276,6 +311,8 @@ updateTriangle:
 @forceOn:
 		lda #$00
 		sta channelKeyOn+2
+		lda channelMuteStates+2
+		bne updateNoise
 		lda triangleMirrors
 		sta $4008
 		lda triangleMirrors+2
@@ -287,6 +324,8 @@ updateNoise:
 		lda channelKeyOn+3
 		beq updateDMC
 		dec channelKeyOn+3
+		lda channelMuteStates+3
+		bne updateDMC
 		lda noiseMirrors
 		sta $400c
 		lda noiseMirrors+2
@@ -296,8 +335,10 @@ updateNoise:
 
 updateDMC:
 		lda channelKeyOn+4
-		beq tambo_tickCounters
+		beq updateSFX
 		dec channelKeyOn+4
+		lda channelMuteStates+4
+		bne updateSFX
 		lda #$0f ; preemptively mute DMC
 		sta $4015
 		lda dmcMirrors
@@ -315,10 +356,23 @@ updateDMC:
 		lda #$1f
 		sta $4015
 
+updateSFX:
+		lda #$01
+		sta sfxSlot
+		jsr tambo_writeSFX
+		dec sfxSlot
+		jsr tambo_writeSFX
+
 tambo_tickCounters:
 		ldy soundRegion
 		lda tambo_tickRates,y
 		sta tamboTemp
+		
+		bit tamboPauseStatus
+		bmi tickSFXCounters
+		lda speedSetting ; 0 usually means we haven't called playTrack yet
+		beq tickSFXCounters
+		
 		ldy #$00
 		lda tickCounter
 		clc
@@ -344,7 +398,7 @@ tambo_tickCounters:
 		bcs @speedModLoop
 		sta speedCounter
 		cpy #$00
-		beq @skip
+		beq tickSFXCounters
 		ldx #$04
 @channelLoop:
 		lda channelNoteCounters,x
@@ -353,6 +407,31 @@ tambo_tickCounters:
 @alreadyZero:
 		dex
 		bpl @channelLoop
+		
+tickSFXCounters:
+		ldx #$01
+		jsr tickSFXCounter
+		dex ; fall through to tick slot 0
+
+; SFX durations are treated as speed 1 rows
+tickSFXCounter:
+		ldy #$00
+		lda sfxTickCounters,x
+		clc
+		adc #TEMPO
+		bcc @checkTempoMod
+@tempoModLoop:
+		sbc tamboTemp ; still contains the region tick rate
+		iny
+@checkTempoMod:
+		cmp tamboTemp
+		bcs @tempoModLoop
+		sta sfxTickCounters,x
+		cpy #$00
+		beq @skip
+		lda sfxNoteCounters,x
+		beq @skip
+		dec sfxNoteCounters,x
 @skip:
 		rts
 
@@ -504,5 +583,276 @@ tambo_readNote:
 		inc channelNotePointers_Hi,x
 @noCarry:
 		inc channelKeyOn,x ; signal key on
+noSFX:
 		rts
+
+tambo_readSFX:
+		ldx sfxSlot
+		lda sfxChannelIndexes,x
+		bmi noSFX ; skip if slot is free
+		
+		sta channelIndex ; music has finished using this
+		lda sfxNoteCounters,x ; wait until counter becomes 0
+		bne noSFX
+		
+		lda sfxPointers_Hi,x
+		bpl noSFX ; (avoid using stale data)
+		
+		sta pointer16+1
+		lda sfxPointers_Lo,x
+		sta pointer16
+		ldy #$00
+		lda (pointer16),y ; duration
+		bne @loadRegs
+
+		ldx sfxSlot
+		lda #$ff
+		sta sfxChannelIndexes,x ; mark slot as clear
+		tya
+		ldx channelIndex
+		sta channelMuteStates,x ; clear channel mute state
+		rts
+
+@loadRegs:
+		sta sfxNoteCounters,x
+		iny
+		txa
+		asl a
+		asl a
+		sta tamboTemp
+		tax
+@rowReadLoop:
+		lda (pointer16),y
+		sta sfxMirrors,x
+		inx
+		iny
+		cpy #$05
+		bne @rowReadLoop
+		
+		; add Y to pointer so it points to the next note
+		ldx sfxSlot
+		tya
+		clc
+		adc pointer16
+		sta sfxPointers_Lo,x
+		bcc @noCarry
+		inc sfxPointers_Hi,x
+@noCarry:
+		inc sfxKeyOn,x ; key-on
+		
+		ldy channelIndex
+		lda #$01
+		sta channelMuteStates,y ; mute music channel
+		
+		cpy #$03
+		bcs noSFX
+		
+		; set up channelIndex so we can reuse the note lookup routine
+		txa
+		adc #5 ; carry already clear
+		sta channelIndex ; treat SFX slots 0-1 as channel indexes 5-6
+		tax
+		
+; note lookup for pulse/triangle
+noteLookup:
+		txa
+		sec
+		rol a ; channelIndex * 4 + 2
+		asl a
+		tax
+		lda apuMirrors,x
+		cmp #REST ; check for rest note
+		beq @restNote
+		cmp #CUT ; check for note cut
+		bcc @validNote
+		
+; only pulse/triangle get note cut support
+; (noise/DMC need explicit muting within song data)
+@noteCut:
+		dex ; X = channelIndex * 4
+		dex
+		cpx #(5*4) ; are we handling an SFX slot?
+		bcs muteSFX
+@notSFX:
+		ldy #$03
+@initChannelLoop:
+		lda tambo_registerInitTable,x
+		sta apuMirrors,x
+		inx
+		dey
+		bpl @initChannelLoop
+		bmi @skipHighPeriod ; [unconditional branch]
+		
+@restNote:
+		ldx channelIndex
+		dec channelKeyOn,x ; forcefully key-off
+		beq @skipHighPeriod ; [unconditional branch]
+
+@validNote:
+		ldy soundRegion ; transpose based on the region
+		adc tambo_noteAdjustments,y ; carry already clear
+		stx tamboTemp ; temporarily save offset into apuMirrors
+		ldx channelIndex
+		clc
+		adc channelTransposition,x ; apply transposition
+		tay
+		ldx tamboTemp
+		lda periodTableLo,y
+		sta apuMirrors,x
+		inx
+		cpy #36 ; high period byte is always 0 past this note
+		bcs @skipHighPeriod ; (assume length counter value contains that 0)
+		lda periodTableHi,y
+		ora apuMirrors,x ; combine with length counter
+		sta apuMirrors,x
+@skipHighPeriod:
+		rts
+
+muteSFX:
+		lda sfxSlot
+		asl a
+		asl a
+		tax
+		ldy tamboTemp ; still contains SFX channel index * 4
+		lda #$03
+		sta tamboTemp ; oops, we ran out of counters...
+@initChannelLoop:
+		lda tambo_registerInitTable,y
+		sta sfxMirrors,x
+		inx
+		iny
+		dec tamboTemp
+		bpl @initChannelLoop
+		rts
+
+tambo_writeSFX:
+		ldx sfxSlot
+		lda sfxChannelIndexes,x
+		sta channelIndex ; music has finished using this
+		bmi @skip ; skip if slot is free
+		
+		ldy #$ff
+		txa
+		asl a
+		asl a
+		sta tamboTemp ; = sfxSlot * 4
+		
+		ldx channelIndex ; use as jump table index
+		lda @channelHandlers_Hi,x
+		pha
+		lda @channelHandlers_Lo,x
+		pha
+@skip:
+		rts
+
+@channelHandlers_Lo:
+	.byte <(pulse1Handler-1)
+	.byte <(pulse2Handler-1)
+	.byte <(triangleHandler-1)
+	.byte <(noiseHandler-1)
+	.byte <(dmcHandler-1)
+@channelHandlers_Hi:
+	.byte >(pulse1Handler-1)
+	.byte >(pulse2Handler-1)
+	.byte >(triangleHandler-1)
+	.byte >(noiseHandler-1)
+	.byte >(dmcHandler-1)
+
+pulse1Handler:
+		ldx sfxSlot
+		lda sfxKeyOn,x
+		beq @skip
+		dec sfxKeyOn,x
+		ldx tamboTemp
+		lda sfxMirrors,x
+		sta $4000
+		lda sfxMirrors+1,x
+		sta $4001
+		sty $4017
+		lda sfxMirrors+2,x
+		sta $4002
+		lda sfxMirrors+3,x
+		sta $4003
+@skip:
+		rts
+
+pulse2Handler:
+		ldx sfxSlot
+		lda sfxKeyOn,x
+		beq @skip
+		dec sfxKeyOn,x
+		ldx tamboTemp
+		lda sfxMirrors,x
+		sta $4004
+		lda sfxMirrors+1,x
+		sta $4005
+		sty $4017
+		lda sfxMirrors+2,x
+		sta $4006
+		lda sfxMirrors+3,x
+		sta $4007
+@skip:
+		rts
+
+triangleHandler:
+		ldx tamboTemp
+		lda sfxMirrors+1,x ; nonzero = force on (i.e. linear counter trill)
+		bne @forceOn
+		ldx sfxSlot
+		lda sfxKeyOn,x
+		beq @skip
+@forceOn:
+		ldx sfxSlot
+		iny ; Y = 0
+		sty sfxKeyOn,x
+		ldx tamboTemp
+		lda sfxMirrors,x
+		sta $4008
+		lda sfxMirrors+2,x
+		sta $400a
+		lda sfxMirrors+3,x
+		sta $400b
+@skip:
+		rts
+
+noiseHandler:
+		ldx sfxSlot
+		lda sfxKeyOn,x
+		beq @skip
+		dec sfxKeyOn,x
+		ldx tamboTemp
+		lda sfxMirrors,x
+		sta $400c
+		lda sfxMirrors+2,x
+		sta $400e
+		lda sfxMirrors+3,x
+		sta $400f
+@skip:
+		rts
+
+dmcHandler:
+		ldx sfxSlot
+		lda sfxKeyOn,x
+		beq @skip
+		dec sfxKeyOn,x
+		ldx tamboTemp
+		lda #$0f ; preemptively mute DMC
+		sta $4015
+		lda sfxMirrors,x
+		bmi @skip ; bit 7 set = keep DMC muted
+		sta $4010
+		lda sfxMirrors+1,x
+		bmi @skipDirectLoad ; bit 7 set = skip direct load
+		sta $4011
+@skipDirectLoad:
+		lda sfxMirrors+2,x
+		sta $4012
+		lda sfxMirrors+3,x
+		sta $4013
+		; (re)trigger DMC DMA
+		lda #$1f
+		sta $4015
+@skip:
+		rts
+
 
