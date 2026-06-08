@@ -458,29 +458,28 @@ updatePatternPointer:
 endOfSong:
 		rts
 
-fetchNote:
+tambo_readNote:
+		ldx channelIndex
+		lda channelNoteCounters,x ; wait until counter becomes 0
+		beq @checkNotePointer
+@noNewNote:
+		rts
+
+@refetchPatternThenNote:
+		jsr tambo_readPattern
+
+@checkNotePointer:
+		lda channelNotePointers_Hi,x ; (avoid reading a stale pattern command)
+		bpl @noNewNote
+
+@fetchNote:
 		lda channelNotePointers_Lo,x
 		sta pointer16
 		lda channelNotePointers_Hi,x
 		sta pointer16+1
 		ldy #$00
 		lda (pointer16),y ; note duration
-		rts
-
-tambo_readNote:
-		ldx channelIndex
-		lda channelNoteCounters,x ; wait until counter becomes 0
-		bne @noNewNote
-
-@checkNotePointer:
-		lda channelNotePointers_Hi,x ; (avoid reading a stale pattern command)
-		bpl @noNewNote
-		
-		jsr fetchNote
-		bne @newNote ; and proceed if duration is nonzero
-		
-		jsr tambo_readPattern ; if duration is 0, read the next pattern
-		jmp @checkNotePointer ; and refetch the note
+		beq @refetchPatternThenNote ; if duration is 0, read the next pattern
 
 @newNote:
 		sta channelNoteCounters,x
@@ -509,7 +508,5 @@ tambo_readNote:
 		adc #$00
 		sta channelNotePointers_Hi,x
 		inc channelKeyOn,x ; signal key on
-		
-@noNewNote:
 		rts
 
