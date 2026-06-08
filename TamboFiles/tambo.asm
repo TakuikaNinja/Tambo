@@ -373,9 +373,20 @@ tambo_readPattern:
 		sta channelNotePointers_Hi,x
 		iny
 		cmp #$00 ; pattern addresses < $8000 are pattern commands
-		bmi updatePatternPointer
+		bpl patternCommand
 		
-		; address < $8000 means this is a pattern command
+updatePatternPointer:
+		tya ; add Y to pointer so it points to the next pattern
+		clc
+		adc pointer16
+		sta channelPatternPointers_Lo,x
+		bcc endOfSong
+		inc channelPatternPointers_Hi,x
+endOfSong:
+		rts
+
+; address < $8000 means this is a pattern command
+patternCommand:
 		lda channelNotePointers_Lo,x ; read command ID
 		beq endOfSong ; $xx00 = end song (for that channel)
 		
@@ -440,18 +451,8 @@ tambo_readPattern:
 		iny
 		lda (pointer16),y
 		sta channelPatternPointers_Hi,x
-		; then refetch pattern
+		; then read the new pattern
 		jmp tambo_readPattern
-		
-updatePatternPointer:
-		tya ; add Y to pointer so it points to the next pattern
-		clc
-		adc pointer16
-		sta channelPatternPointers_Lo,x
-		bcc endOfSong
-		inc channelPatternPointers_Hi,x
-endOfSong:
-		rts
 
 tambo_readNote:
 		ldx channelIndex
