@@ -24,11 +24,20 @@ TEMPO = 150
 ; Example: .word CMD::JUMP, new_pattern
 ; this is most often used for infinite loops
 
+; TRANSPOSE adds a signed 7-bit offset to the channel's running transposition
+; offset is stored in the high byte, yielding a -64 to +63 range
+; *the running transposition is set to 0 when a new track is played
+; *transposing below A0 or above B7 is undefined behaviour
+; *noise & DMC are unaffected (but can read/process the command)
+; Example 1: .word CMD::TRANSPOSE | ((128 - 64) << 8) ; -64 semitones
+; Example 2: .word CMD::TRANSPOSE | (3 << 8) ; +3 semitones
+; this is most often used for transposing triangle bass patterns
+
 ; loop commands
-; SET_LOOP sets that channel's loop counter to the value in the high byte
+; SET_LOOP1/2 sets that channel's loop counter to the value in the high byte
 ; Example: .word CMD::SET_LOOP | (loop_count << 8) ; loop_count is 0-127
 ;
-; LOOP_JUMP checks that channel's loop counter:
+; LOOP_JUMP1/2 checks that channel's loop counter:
 ; - if 0, progress to the next pattern address
 ; - otherwise, decrement the loop counter and perform a JUMP
 ; Example: .word CMD::LOOP_JUMP, new_pattern
@@ -36,21 +45,40 @@ TEMPO = 150
 ; this combination is often used for finite loops, such as:
 ; 
 ;	apu_dance_pulse2:
-;		.word CMD::SET_LOOP | (7 << 8)
+;		.word CMD::SET_LOOP1 | (7 << 8)
 ;	@intro:
 ;		.word apu_dance_pulse2_kick
-;		.word CMD::LOOP_JUMP, @intro
+;		.word CMD::LOOP_JUMP1, @intro
 ;		.word CMD::END
 ;
 ; in this example, apu_dance_pulse2_kick will play (7 + 1 = 8) times
+;
+; the 1/2 separation is for using separate loop counters in nested loops:
+;
+;   nested_example:
+;		.word CMD::SET_LOOP1 | (3 << 8) ; play @outer_loop 4 times
+;	@outer_loop:
+;		.word CMD::SET_LOOP2 | (3 << 8) ; play @inner_loop 4 times
+;	@inner_loop:
+;		.word pattern0
+;		.word pattern1
+;		.word CMD::LOOP_JUMP2, @inner_loop
+;
+;		.word CMD::TRANSPOSE | (2 << 8) ; +2 semitones
+;		.word CMD::LOOP_JUMP1, @outer_loop
+;
+;		.word CMD::TRANSPOSE | ((128 - 8) << 8) ; -2*4 = -8 semitones
+;		.word CMD::JUMP, nested_example ; loop with transposition = 0
 
 ; For commands other than END and JUMP, do NOT rely on the exact values
 ; commands commented out below are reserved for future versions
 .enum CMD
 	END = $0000
-;	TRANSPOSE
-	SET_LOOP = $00fd
-	LOOP_JUMP = $00fe
+	SET_LOOP1 = $0001
+	LOOP_JUMP1 = $0002
+	TRANSPOSE = $0080
+	SET_LOOP2 = $00fd
+	LOOP_JUMP2 = $00fe
 	JUMP = $00ff
 .endenum
 

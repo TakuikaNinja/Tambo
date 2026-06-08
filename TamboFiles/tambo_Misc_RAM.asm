@@ -3,7 +3,9 @@
 	channelPatternPointers_Hi: .res 5
 	channelNotePointers_Lo: .res 5
 	channelNotePointers_Hi: .res 5
-	channelLoopCounters: .res 5
+	channelLoopCounter1: .res 5
+	channelLoopCounter2: .res 5
+	channelTransposition: .res 5
 	
 	tamboPauseStatus: .res 1
 	tickCounter: .res 1

@@ -39,8 +39,8 @@ testsong_triangle:
 testsong_triangle_pattern0:
 	.byte 2, $1f, $00, A2, $01 << 3
 	.byte 2, $1f, $00, A3, $01 << 3
-;	.byte 2, $1f, $00, A2, $01 << 3
-;	.byte 2, $1f, $00, A3, $01 << 3
+	.byte 2, $03, $01, A3, $01 << 3 ; $4009 != 0: auto linear counter trill
+	.byte 2, $01, $01, A4, $01 << 3 ; (only useful with reload values 1-3)
 	.byte 0
 
 testsong_noise:

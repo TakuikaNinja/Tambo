@@ -110,16 +110,14 @@ apu_dance_pulse1_tom:
 	.byte 1, $80, $83, AS3, $01 << 3
 	.byte 3, $80, $83, C4, $01 << 3
 	.byte 3, $80, $83, AS3, $01 << 3
-	.byte 2, $80, $83, GS3, $01 << 3
-	.byte 16, 0, 0, CUT, 0
+	.byte 2+16, $80, $83, GS3, $01 << 3
 	.byte 2, $80, $83, AS3, $01 << 3
 	.byte 2, $80, $83, AS3, $01 << 3
 	.byte 3, $80, $83, AS3, $01 << 3
 	.byte 1, $80, $83, AS3, $01 << 3
 	.byte 3, $80, $83, DS4, $01 << 3
 	.byte 3, $80, $83, C4, $01 << 3
-	.byte 2, $80, $83, GS3, $01 << 3
-	.byte 16, 0, 0, CUT, 0
+	.byte 2+16, $80, $83, GS3, $01 << 3
 	.byte 0
 
 apu_dance_pulse1_pattern4:
@@ -200,15 +198,15 @@ apu_dance_pulse1_pattern7:
 	.byte 0
 
 apu_dance_pulse2:
-	.word CMD::SET_LOOP | (7 << 8)
+	.word CMD::SET_LOOP1 | (7 << 8)
 apu_dance_pulse2_intro:
 	.word apu_dance_pulse2_kick
-	.word CMD::LOOP_JUMP, apu_dance_pulse2_intro
+	.word CMD::LOOP_JUMP1, apu_dance_pulse2_intro
 
-	.word CMD::SET_LOOP | (13 << 8)
+	.word CMD::SET_LOOP1 | (13 << 8)
 apu_dance_pulse2_A:
 	.word apu_dance_pulse2_pattern0
-	.word CMD::LOOP_JUMP, apu_dance_pulse2_A
+	.word CMD::LOOP_JUMP1, apu_dance_pulse2_A
 
 	.word apu_dance_pulse2_pattern1
 	.word apu_dance_pulse2_pattern1
@@ -273,25 +271,28 @@ apu_dance_pulse2_pattern1:
 apu_dance_triangle:
 	.word apu_dance_blank_pattern
 	
-	.word CMD::SET_LOOP | (12 << 8)
+	.word CMD::SET_LOOP1 | (12 << 8)
 apu_dance_triangle_A:
 	.word apu_dance_triangle_pattern0
 	.word apu_dance_triangle_pattern1
-	.word CMD::LOOP_JUMP, apu_dance_triangle_A
+	.word CMD::LOOP_JUMP1, apu_dance_triangle_A
 	
 	.word apu_dance_triangle_pattern0
 	.word apu_dance_triangle_pattern2
 	
-	.word apu_dance_triangle_pattern3
-	.word apu_dance_triangle_pattern3
-	.word apu_dance_triangle_pattern3
-	.word apu_dance_triangle_pattern3
+	.word CMD::TRANSPOSE | (2 << 8) ; +2 semitones
+	.word CMD::SET_LOOP1 | (3 << 8)
+apu_dance_triangle_B:
+	.word apu_dance_triangle_pattern0
+	.word apu_dance_triangle_pattern1
+	.word CMD::LOOP_JUMP1, apu_dance_triangle_B
+	.word CMD::TRANSPOSE | ((128 - 2) << 8) ; -2 semitones
 	
-	.word CMD::SET_LOOP | (3 << 8)
+	.word CMD::SET_LOOP1 | (3 << 8)
 apu_dance_triangle_C:
 	.word apu_dance_triangle_pattern0
 	.word apu_dance_triangle_pattern1
-	.word CMD::LOOP_JUMP, apu_dance_triangle_C
+	.word CMD::LOOP_JUMP1, apu_dance_triangle_C
 	
 	.word CMD::JUMP, apu_dance_triangle
 
@@ -320,32 +321,17 @@ apu_dance_triangle_pattern2:
 	.byte 2, $1f, $00, AS2, $01 << 3
 	.byte 0
 
-apu_dance_triangle_pattern3:
-	.byte 1, $1f, $00, AS2, $01 << 3
-	.byte 3, $1f, $00, C3, $01 << 3
-	.byte 3, $1f, $00, C3, $01 << 3
-	.byte 3, $1f, $00, D3, $01 << 3
-	.byte 3, $1f, $00, D3, $01 << 3
-	.byte 3, $1f, $00, D3, $01 << 3
-	
-	.byte 4, $1f, $00, AS2, $01 << 3
-	.byte 3, $1f, $00, AS2, $01 << 3
-	.byte 3, $1f, $00, AS2, $01 << 3
-	.byte 4, $1f, $00, AS2, $01 << 3
-	.byte 2, $1f, $00, GS2, $01 << 3
-	.byte 0
-
 apu_dance_noise:
 	.word apu_dance_noise_pattern0
 	.word apu_dance_noise_pattern1
 	
-	.word CMD::SET_LOOP | (10 << 8)
+	.word CMD::SET_LOOP1 | (10 << 8)
 apu_dance_noise_main:
 	.word apu_dance_noise_pattern0
 	.word apu_dance_noise_pattern0
 	.word apu_dance_noise_pattern0
 	.word apu_dance_noise_pattern1
-	.word CMD::LOOP_JUMP, apu_dance_noise_main
+	.word CMD::LOOP_JUMP1, apu_dance_noise_main
 	
 	.word CMD::JUMP, apu_dance_noise
 

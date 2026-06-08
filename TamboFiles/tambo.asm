@@ -99,7 +99,9 @@ tambo_initRAM:
 @loop:
 		sta channelKeyOn,x
 		sta channelNoteCounters,x
-		sta channelLoopCounters,x
+		sta channelLoopCounter1,x
+		sta channelLoopCounter2,x
+		sta channelTransposition,x
 		dex
 		bpl @loop
 		sta tickCounter
@@ -216,7 +218,12 @@ tambo_soundUpdate:
 @validNote:
 		ldy soundRegion ; transpose based on the region
 		adc tambo_noteAdjustments,y ; carry already clear
+		stx tamboTemp ; temporarily save offset into apuMirrors
+		ldx channelIndex
+		clc
+		adc channelTransposition,x ; apply transposition
 		tay
+		ldx tamboTemp
 		lda periodTableLo,y
 		sta apuMirrors,x
 		inx
@@ -262,9 +269,13 @@ updatePulse2:
 		sta $4007
 
 updateTriangle:
+		lda triangleMirrors+1 ; nonzero = force on (i.e. linear counter trill)
+		bne @forceOn
 		lda channelKeyOn+2
 		beq updateNoise
-		dec channelKeyOn+2
+@forceOn:
+		lda #$00
+		sta channelKeyOn+2
 		lda triangleMirrors
 		sta $4008
 		lda triangleMirrors+2
@@ -375,27 +386,57 @@ tambo_readPattern:
 		cmp #<CMD::JUMP ; $xxff = pattern jump
 		beq @patternJump
 		
-		cmp #<CMD::LOOP_JUMP
-		beq @checkLoopCounter
+		cmp #<CMD::LOOP_JUMP1
+		beq @checkLoopCounter1
 		
-		cmp #<CMD::SET_LOOP
+		cmp #<CMD::SET_LOOP1
+		beq @setLoopCounter1
+		
+		cmp #<CMD::TRANSPOSE
+		beq @transpose
+		
+		cmp #<CMD::LOOP_JUMP2
+		beq @checkLoopCounter2
+		
+		cmp #<CMD::SET_LOOP2
 		bne endOfSong ; treat all remaining commands as "end song" for now
 
-@setLoopCounter:
-		lda channelNotePointers_Hi,x ; high byte = loop counter value
-		sta channelLoopCounters,x
+@setLoopCounter2:
+		lda channelNotePointers_Hi,x ; high byte = loop counter value 2
+		sta channelLoopCounter2,x
+		jmp refetchPattern
+
+@setLoopCounter1:
+		lda channelNotePointers_Hi,x ; high byte = loop counter value 1
+		sta channelLoopCounter1,x
+		jmp refetchPattern
+
+@transpose:
+		lda channelNotePointers_Hi,x ; high byte = transposition offset
+		asl a ; sign extend from 7-bit to 8-bit
+		cmp #$80
+		ror a
+		adc channelTransposition,x ; carry always clear
+		sta channelTransposition,x
 		jmp refetchPattern
 		
-@checkLoopCounter:
-		lda channelLoopCounters,x
-		bne @decLoopCounter
+@checkLoopCounter1:
+		lda channelLoopCounter1,x
+		beq @nextPattern
+		dec channelLoopCounter1,x
+		jmp @patternJump
+
+@checkLoopCounter2:
+		lda channelLoopCounter2,x
+		bne @decLoopCounter2
+@nextPattern:
 		iny ; if loop counter = 0, progress to next pattern
 		iny
 		jmp refetchPattern
 		
-@decLoopCounter:
-		dec channelLoopCounters,x ; then fall through to handling the jump
-		
+@decLoopCounter2:
+		dec channelLoopCounter2,x ; then fall through to handling the jump
+
 		; JUMP: fetch next 2 bytes & set as new pattern pointer
 @patternJump:
 		lda (pointer16),y
