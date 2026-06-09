@@ -50,6 +50,7 @@ tambo_pauseTrack:
 		tya
 		pha
 		jsr initAPURegs ; clobbers AXY
+		jsr initSFX
 		jmp pullXY
 @resume:
 		rts
@@ -61,7 +62,8 @@ tambo_stopTrack:
 		pha
 		tya
 		pha
-		jmp initAPUThenPullXY
+		jsr tambo_initAPU
+		jmp pullXY
 
 initAPURegs:
 		lda #$00 ; mute everything including DMC
@@ -92,6 +94,7 @@ tambo_initAPU:
 @regionValid:
 		lda #$00
 		sta currentTrack
+		sta currentSFX
 		jsr initSFX
 		
 tambo_initRAM:
@@ -121,10 +124,18 @@ initSFXSlot:
 		lda #$00
 		sta sfxPointers_Lo,x
 		sta sfxPointers_Hi,x
+		sta sfxTransposition,x
 		sta sfxNoteCounters,x
+		sta sfxTickCounters,x
+		sta sfxSpeedSettings,x
+		sta sfxSpeedCounters,x
 		rts
 
-; carry set = SFX failed to load
+; SFX will not load if:
+; - currentSFX >= [tambo_maxSFX]
+; - channel index in SFX data > 4
+; - speed setting in SFX data = 0
+; - both SFX slots are occupied with other channels
 tambo_playSFX:
 		txa
 		pha
@@ -134,7 +145,6 @@ tambo_playSFX:
 		cpy tambo_maxSFX
 		bcc @checkChannelIndex
 @invalid:
-		sec
 		jmp pullXY
 		
 @checkChannelIndex:
@@ -153,36 +163,49 @@ tambo_playSFX:
 		; (since that would risk leaving a channel running)
 		ldx #$00 ; start at slot 0
 		cmp sfxChannelIndexes
-		beq @loadSFX ; slot 0 matches
+		beq @checkSpeed ; slot 0 matches
 		inx
 		cmp sfxChannelIndexes+1
-		beq @loadSFX ; slot 1 matches
+		beq @checkSpeed ; slot 1 matches
 		dex
 		bit sfxChannelIndexes
-		bmi @loadSFX ; slot 0 free
+		bmi @checkSpeed ; slot 0 free
 		inx
 		bit sfxChannelIndexes+1
 		bpl @invalid ; slot 1 not free either? give up
 
+@checkSpeed:
+		pha
+		iny
+		lda (pointer16),y ; speed setting
+		bne @loadSFX
+		pla
+		jmp pullXY ; reject if speed = 0
+
 @loadSFX:
 		; set up the SFX slot
+		sta sfxSpeedSettings,x
+		pla
 		sta sfxChannelIndexes,x
 		lda #$00
 		sta sfxTransposition,x
 		sta sfxNoteCounters,x
 		sta sfxKeyOn,x
-		
-		lda pointer16 ; add 1 to account for channel index byte
+		sta sfxTickCounters,x
+		sta sfxSpeedCounters,x
+		iny
+		tya ; add Y to pointer to point to start of SFX notes
 		clc
-		adc #$01
+		adc pointer16
 		sta sfxPointers_Lo,x
 		lda pointer16+1
 		adc #$00
 		sta sfxPointers_Hi,x
-		clc
 		jmp pullXY
 
-; carry set = track failed to load
+; track will not load if:
+; - currentTrack >= [tambo_maxTracks]
+; - speed setting in track data = 0
 tambo_playTrack:
 		txa
 		pha
@@ -190,14 +213,9 @@ tambo_playTrack:
 		pha
 		ldy currentTrack
 		cpy tambo_maxTracks ; reject invalid track numbers
-		bcc validTrack
+		bcs pullXY
 
-initAPUThenPullXY:
-		jsr tambo_initAPU
-		jmp pullXY
-
-; if valid, load the initial pattern pointers from the header
-validTrack:
+		; if valid, load the initial pattern pointers from the header
 		jsr tambo_initRAM
 		lda trackHeaders_Lo,y
 		sta pointer16
@@ -207,6 +225,7 @@ validTrack:
 		tax
 		tay
 		lda (pointer16),y ; speed setting
+		beq pullXY ; reject if speed = 0
 		sta speedSetting
 		iny
 		
@@ -231,7 +250,6 @@ validTrack:
 
 		lda #$00
 		sta tamboPauseStatus
-		clc
 pullXY:
 		pla
 		tay
@@ -386,8 +404,7 @@ tambo_tickCounters:
 		bcs @tempoModLoop
 		sta tickCounter
 		tya
-		clc
-		adc speedCounter
+		adc speedCounter ; carry always clear
 		ldy #$00
 		bcc @checkSpeedMod
 @speedModLoop:
@@ -415,6 +432,11 @@ tickSFXCounters:
 
 ; SFX durations are treated as speed 1 rows
 tickSFXCounter:
+		lda sfxChannelIndexes,x
+		bmi @skip ; skip if free slot
+		lda sfxSpeedSettings,x
+		beq @skip ; in case the speed was somehow set to 0
+		
 		ldy #$00
 		lda sfxTickCounters,x
 		clc
@@ -427,6 +449,17 @@ tickSFXCounter:
 		cmp tamboTemp
 		bcs @tempoModLoop
 		sta sfxTickCounters,x
+		tya
+		adc sfxSpeedCounters,x ; carry always clear
+		ldy #$00
+		bcc @checkSpeedMod
+@speedModLoop:
+		sbc sfxSpeedSettings,x
+		iny
+@checkSpeedMod:
+		cmp sfxSpeedSettings,x
+		bcs @speedModLoop
+		sta sfxSpeedCounters,x
 		cpy #$00
 		beq @skip
 		lda sfxNoteCounters,x

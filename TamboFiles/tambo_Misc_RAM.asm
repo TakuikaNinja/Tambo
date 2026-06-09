@@ -20,7 +20,9 @@
 	tickCounter: .res 1
 	sfxTickCounters: .res 2
 	speedSetting: .res 1
+	sfxSpeedSettings: .res 2
 	speedCounter: .res 1
+	sfxSpeedCounters: .res 2
 	
 	currentTrack: .res 1
 	currentSFX: .res 1
