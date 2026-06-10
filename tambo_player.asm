@@ -1,12 +1,12 @@
+; enable backslash escape sequences
+.feature string_escapes +
+
 .include "defs.asm"
 .include "ram.asm"
 .include "constants.asm"
 ;.include "macros.asm"
 
 .include "TamboFiles/tambo_includes.asm"
-
-; enable backslash escape sequences
-.feature string_escapes +
 
 .segment "HEADER"
   .byte "NES", $1a ; iNES header identifier
@@ -21,7 +21,7 @@
   .byte $02 ; Multiple regions (i.e. NTSC/PAL/Dendy)
   .byte $00 ; Not a Vs. System or extended console type
   .byte $00 ; No misc. ROMs
-  .byte $00 ; Standard controllers
+  .byte $01 ; Standard controllers
 
 .segment "CODE"
 
@@ -91,9 +91,10 @@ Reset:
 		
 		jsr InitNametables
 		
-		lda #$80
+		lda #%10010000 ; set BG pattern table selection
 		sta vram_buffer ; mark buffer as empty (just in case)
 		sta PPU_CTRL_MIRROR
+		bit PPU_STATUS
 		sta PPU_CTRL
 Main:
 		jsr CheckButtonPresses
@@ -373,10 +374,14 @@ HandleGameMode:
 	.out .sprintf ("Tambo driver: %d bytes", *-periodTableLo)
 	
 	.include "Songs/tambo_static.asm"
+	.out .sprintf ("\nStatic data: %d bytes", *-tambo_maxTracks)
 	.include "Songs/tambo_test_song.asm"
+	.out .sprintf ("Music data (Test song): %d bytes", *-testsong_header)
 	.include "Songs/apu_dance.asm"
+	.out .sprintf ("Music data (APU Dance): %d bytes", *-apu_dance_header)
 	.include "Songs/tambo_sfx.asm"
-	.out .sprintf ("Sound data: %d bytes", *-tambo_maxTracks)
+	.out .sprintf ("SFX data: %d bytes", *-sfx_start)
+	.out .sprintf ("Total sound data: %d bytes\n", *-tambo_maxTracks)
 
 .segment "VECTORS"
 	.addr NMI

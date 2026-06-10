@@ -15,6 +15,8 @@
 ; 2. the first free slot (channel index < 0), starting at slot 0
 ; if neither condition is met, the SFX will not load
 
+sfx_start:
+
 pulse2_tumble:
 	.byte 1
 	.byte 4

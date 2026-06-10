@@ -13,6 +13,7 @@
 	Buttons: .res 4
 	
 	.include "TamboFiles/tambo_ZP_RAM.asm"
+	.out .sprintf ("\nTambo ZP: %d bytes", *-soundRegion)
 
 ; rest of memory
 .segment "BSS"
@@ -21,4 +22,5 @@
 	vram_buffer: .res 256
 	
 	.include "TamboFiles/tambo_Misc_RAM.asm"
+	.out .sprintf ("Tambo Misc. RAM: %d bytes", *-channelPatternPointers_Lo)
 

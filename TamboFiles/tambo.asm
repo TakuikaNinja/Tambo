@@ -37,6 +37,10 @@ tambo_registerInitTable:
 	.byte $80,$00,$00,$00
 	.byte $30,$00,$00,$00
 	.byte $00,$00,$00,$00
+; dirty hack: point note data to one of these 0s when starting a track, 
+; so readNote detects it as a pattern terminator
+ALWAYS_ZERO = tambo_registerInitTable+16
+.assert ALWAYS_ZERO >= $8000, error, "Sound driver must be located >= $8000"
 
 ; toggle pause state for the currently playing track (clobbers A)
 ; (currently playing SFX will be muted alongside track playback)
@@ -235,18 +239,15 @@ tambo_playTrack:
 		iny
 		lda (pointer16),y
 		sta channelPatternPointers_Hi,x
+		; set the initial note pointer to a location containing 0
+		lda #<ALWAYS_ZERO
+		sta channelNotePointers_Lo,x
+		lda #>ALWAYS_ZERO
+		sta channelNotePointers_Hi,x
 		iny
 		inx
 		cpx #$05
 		bne @headerLoadLoop
-
-; then fetch the initial note pointers
-		dex
-		stx channelIndex
-@notePointerLoadLoop:
-		jsr tambo_readPattern
-		dec channelIndex
-		bpl @notePointerLoadLoop
 
 		lda #$00
 		sta tamboPauseStatus
@@ -327,8 +328,8 @@ updateTriangle:
 		lda channelKeyOn+2
 		beq updateNoise
 @forceOn:
-		lda #$00
-		sta channelKeyOn+2
+		inx ; X = 0 (done with ticking the frame counter)
+		stx channelKeyOn+2
 		lda channelMuteStates+2
 		bne updateNoise
 		lda triangleMirrors
@@ -745,7 +746,7 @@ muteSFX:
 		lda sfxSlot
 		asl a
 		asl a
-		tax
+		tax ; = sfxSlot * 4
 		ldy tamboTemp ; still contains SFX channel index * 4
 		lda #$03
 		sta tamboTemp ; oops, we ran out of counters...
