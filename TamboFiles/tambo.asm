@@ -197,9 +197,8 @@ tambo_playSFX:
 		sta sfxKeyOn,x
 		sta sfxTickCounters,x
 		sta sfxSpeedCounters,x
-		iny
-		tya ; add Y to pointer to point to start of SFX notes
-		clc
+		tya ; add Y+1 to pointer to point to start of SFX notes
+		sec
 		adc pointer16
 		sta sfxPointers_Lo,x
 		lda pointer16+1
@@ -231,9 +230,9 @@ tambo_playTrack:
 		lda (pointer16),y ; speed setting
 		beq pullXY ; reject if speed = 0
 		sta speedSetting
-		iny
 		
 @headerLoadLoop:
+		iny
 		lda (pointer16),y
 		sta channelPatternPointers_Lo,x
 		iny
@@ -244,7 +243,6 @@ tambo_playTrack:
 		sta channelNotePointers_Lo,x
 		lda #>ALWAYS_ZERO
 		sta channelNotePointers_Hi,x
-		iny
 		inx
 		cpx #$05
 		bne @headerLoadLoop
@@ -484,13 +482,11 @@ tambo_readPattern:
 		iny
 		lda (pointer16),y
 		sta channelNotePointers_Hi,x
-		iny
-		cmp #$00 ; pattern addresses < $8000 are pattern commands
-		bpl patternCommand
+		bpl patternCommand ; pattern addresses < $8000 are pattern commands
 		
 updatePatternPointer:
-		tya ; add Y to pointer so it points to the next pattern
-		clc
+		tya ; add Y+1 to pointer so it points to the next pattern
+		sec
 		adc pointer16
 		sta channelPatternPointers_Lo,x
 		bcc endOfSong
@@ -559,6 +555,7 @@ patternCommand:
 
 		; JUMP: fetch next 2 bytes & set as new pattern pointer
 @patternJump:
+		iny
 		lda (pointer16),y
 		sta channelPatternPointers_Lo,x
 		iny
@@ -594,24 +591,22 @@ tambo_readNote:
 		sta channelNoteCounters,x
 
 		; copy the next 4 bytes into the APU reg mirrors
-		iny
 		txa
 		asl a ; channelIndex x 4
 		asl a
 		tax
 @rowReadLoop:
+		iny
 		lda (pointer16),y
 		sta apuMirrors,x
 		inx
-		iny
-		cpy #5
-		bne @rowReadLoop
+		cpy #4
+		bcc @rowReadLoop
 		
-		; add Y to pointer so it points to the next note
+		; add Y+1 to pointer so it points to the next note
 		ldx channelIndex
 		tya
-		clc
-		adc pointer16
+		adc pointer16 ; carry already set
 		sta channelNotePointers_Lo,x
 		bcc @noCarry
 		inc channelNotePointers_Hi,x
@@ -649,25 +644,23 @@ tambo_readSFX:
 
 @loadRegs:
 		sta sfxNoteCounters,x
-		iny
 		txa
 		asl a
 		asl a
 		sta tamboTemp
 		tax
 @rowReadLoop:
+		iny
 		lda (pointer16),y
 		sta sfxMirrors,x
 		inx
-		iny
-		cpy #$05
-		bne @rowReadLoop
+		cpy #$04
+		bcc @rowReadLoop
 		
-		; add Y to pointer so it points to the next note
+		; add Y+1 to pointer so it points to the next note
 		ldx sfxSlot
 		tya
-		clc
-		adc pointer16
+		adc pointer16 ; carry already set
 		sta sfxPointers_Lo,x
 		bcc @noCarry
 		inc sfxPointers_Hi,x
