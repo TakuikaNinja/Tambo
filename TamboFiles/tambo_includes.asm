@@ -13,7 +13,7 @@ TEMPO = 150
 
 ; Pattern commands
 ; commands are identified by a pattern address < $8000
-; the low byte of the address defines the command (high byte is unused)
+; the low byte of the address defines the command (high byte may be used as a parameter)
 ; Command specifications:
 
 ; END is defined as $00 in the low byte ($xx00), this ends channel processing
@@ -40,7 +40,7 @@ TEMPO = 150
 ; LOOP_JUMP1/2 checks that channel's loop counter:
 ; - if 0, progress to the next pattern address
 ; - otherwise, decrement the loop counter and perform a JUMP
-; Example: .word CMD::LOOP_JUMP, new_pattern
+; Example: .word CMD::LOOP_JUMP1, new_pattern
 ;
 ; this combination is often used for finite loops, such as:
 ; 

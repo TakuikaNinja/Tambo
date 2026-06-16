@@ -33,8 +33,8 @@ apu_dance_pulse1:
 	.word apu_dance_pulse1_pattern2
 	.word apu_dance_pulse1_pattern0
 	.word apu_dance_pulse1_pattern1
-	.word apu_dance_pulse1_pattern3
-	.word apu_dance_pulse1_pattern2
+	.word apu_dance_pulse1_pattern3 ; fall through to apu_dance_pulse1_pattern2
+;	.word apu_dance_pulse1_pattern2
 
 	.word apu_dance_pulse1_tom
 	
@@ -45,17 +45,17 @@ apu_dance_pulse1:
 	.word apu_dance_pulse1_pattern0
 	.word apu_dance_pulse1_pattern1
 	.word apu_dance_pulse1_pattern3
-	.word apu_dance_pulse1_pattern2
+;	.word apu_dance_pulse1_pattern2
 	
 	.word apu_dance_pulse1_pattern4
 	.word apu_dance_pulse1_pattern5
 	.word apu_dance_pulse1_pattern4
-	.word apu_dance_pulse1_pattern6
-	.word apu_dance_pulse1_pattern4
+	.word apu_dance_pulse1_pattern6 ; fall through to apu_dance_pulse1_pattern4
+;	.word apu_dance_pulse1_pattern4
 	.word apu_dance_pulse1_pattern5
-	.word apu_dance_pulse1_pattern7
+	.word apu_dance_pulse1_pattern7 ; fall through to apu_dance_pulse1_tom
 	
-	.word apu_dance_pulse1_tom
+;	.word apu_dance_pulse1_tom
 
 	.word CMD::JUMP, apu_dance_pulse1
 
@@ -81,6 +81,17 @@ apu_dance_pulse1_pattern1:
 	.byte 2, $d7, $9f, F4, $04 << 3
 	.byte 0
 
+apu_dance_pulse1_pattern3:
+	.byte 2, $d7, $af, GS4, $04 << 3
+	.byte 2, $d3, $08, AS4, $02 << 3
+	.byte 2, $d1, $08, AS4, $03 << 3
+	.byte 2, $d7, $08, GS4, $04 << 3
+	.byte 2, $d7, $08, C5, $04 << 3
+	.byte 2, $d3, $08, C5, $02 << 3
+	.byte 2, $d7, $9f, C5, $04 << 3
+	.byte 2, $d3, $08, DS5, $02 << 3
+;	.byte 0
+; fall through
 apu_dance_pulse1_pattern2:
 	.byte 2, $d7, $08, GS4, $04 << 3
 	.byte 2, $d3, $08, GS4, $02 << 3
@@ -91,35 +102,22 @@ apu_dance_pulse1_pattern2:
 	.byte 2, $80, $83, GS3, $01 << 3
 	.byte 0
 
-apu_dance_pulse1_pattern3:
-	.byte 2, $d7, $af, GS4, $04 << 3
-	.byte 2, $d3, $08, AS4, $02 << 3
-	.byte 2, $d1, $08, AS4, $03 << 3
-	.byte 2, $d7, $08, GS4, $04 << 3
-	.byte 2, $d7, $08, C5, $04 << 3
-	.byte 2, $d3, $08, C5, $02 << 3
-	.byte 2, $d7, $9f, C5, $04 << 3
-	.byte 2, $d3, $08, DS5, $02 << 3
-	.byte 0
-
-apu_dance_pulse1_tom:
-	.byte 16*4, 0, 0, CUT, 0
-	.byte 2, $80, $83, AS3, $01 << 3
-	.byte 2, $80, $83, AS3, $01 << 3
-	.byte 3, $80, $83, AS3, $01 << 3
+apu_dance_pulse1_pattern6:
+	.byte 1, $a0, $08, GS3, $01 << 3
+	.byte 1, $a0, $08, CUT, $01 << 3
+	.byte 1, $a0, $08, AS3, $01 << 3
+	.byte 1, $a0, $08, CUT, $01 << 3
+	.byte 1, $a0, $08, GS3, $01 << 3
+	.byte 1, $a0, $08, CUT, $01 << 3
+	.byte 1, $a0, $08, G3, $01 << 3
+	.byte 1, $a0, $08, DS3, $01 << 3
+	.byte 2, $a0, $08, CUT, $01 << 3
+	.byte 2, $80, $83, D4, $01 << 3
+	.byte 1, $80, $83, C4, $01 << 3
 	.byte 1, $80, $83, AS3, $01 << 3
-	.byte 3, $80, $83, C4, $01 << 3
-	.byte 3, $80, $83, AS3, $01 << 3
-	.byte 2+16, $80, $83, GS3, $01 << 3
-	.byte 2, $80, $83, AS3, $01 << 3
-	.byte 2, $80, $83, AS3, $01 << 3
-	.byte 3, $80, $83, AS3, $01 << 3
-	.byte 1, $80, $83, AS3, $01 << 3
-	.byte 3, $80, $83, DS4, $01 << 3
-	.byte 3, $80, $83, C4, $01 << 3
-	.byte 2+16, $80, $83, GS3, $01 << 3
-	.byte 0
-
+	.byte 2, $80, $83, GS3, $01 << 3
+;	.byte 0
+; fall through
 apu_dance_pulse1_pattern4:
 	.byte 1, $a0, $08, C4, $01 << 3
 	.byte 1, $a0, $08, DS4, $01 << 3
@@ -152,22 +150,6 @@ apu_dance_pulse1_pattern5:
 	.byte 2, $80, $83, GS3, $01 << 3
 	.byte 0
 
-apu_dance_pulse1_pattern6:
-	.byte 1, $a0, $08, GS3, $01 << 3
-	.byte 1, $a0, $08, CUT, $01 << 3
-	.byte 1, $a0, $08, AS3, $01 << 3
-	.byte 1, $a0, $08, CUT, $01 << 3
-	.byte 1, $a0, $08, GS3, $01 << 3
-	.byte 1, $a0, $08, CUT, $01 << 3
-	.byte 1, $a0, $08, G3, $01 << 3
-	.byte 1, $a0, $08, DS3, $01 << 3
-	.byte 2, $a0, $08, CUT, $01 << 3
-	.byte 2, $80, $83, D4, $01 << 3
-	.byte 1, $80, $83, C4, $01 << 3
-	.byte 1, $80, $83, AS3, $01 << 3
-	.byte 2, $80, $83, GS3, $01 << 3
-	.byte 0
-
 apu_dance_pulse1_pattern7:
 	.byte 1, $a0, $08, C4, $01 << 3
 	.byte 1, $a0, $08, DS4, $01 << 3
@@ -195,6 +177,24 @@ apu_dance_pulse1_pattern7:
 	.byte 1, $80, $83, C4, $01 << 3
 	.byte 1, $80, $83, AS3, $01 << 3
 	.byte 2, $80, $83, GS3, $01 << 3
+;	.byte 0
+; fall through
+apu_dance_pulse1_tom:
+	.byte 16*4, 0, 0, CUT, 0
+	.byte 2, $80, $83, AS3, $01 << 3
+	.byte 2, $80, $83, AS3, $01 << 3
+	.byte 3, $80, $83, AS3, $01 << 3
+	.byte 1, $80, $83, AS3, $01 << 3
+	.byte 3, $80, $83, C4, $01 << 3
+	.byte 3, $80, $83, AS3, $01 << 3
+	.byte 2+16, $80, $83, GS3, $01 << 3
+	.byte 2, $80, $83, AS3, $01 << 3
+	.byte 2, $80, $83, AS3, $01 << 3
+	.byte 3, $80, $83, AS3, $01 << 3
+	.byte 1, $80, $83, AS3, $01 << 3
+	.byte 3, $80, $83, DS4, $01 << 3
+	.byte 3, $80, $83, C4, $01 << 3
+	.byte 2+16, $80, $83, GS3, $01 << 3
 	.byte 0
 
 apu_dance_pulse2:
