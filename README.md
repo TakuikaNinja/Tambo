@@ -43,13 +43,13 @@ Tambo is primarily developed and intended for cc65 projects. Support for other a
 
 The below folder structure should aid with organising the sound driver usage:
 
-- `TamboFiles`
+- `TamboFiles/`
   - `tambo.asm` - driver source (must place at $8000 onwards)
   - `tambo_includes.asm` - driver constants
   - `tambo_Misc_RAM.asm` - non-zeropage variables
   - `tambo_ZP_RAM.asm` - zeropage variables ($0000-$00FF)
-- `Songs`
-  - `Samples` contains `.dmc` sample files, if needed
+- `Songs/`
+  - `Samples/` contains `.dmc` sample files, if needed
   - `tambo_dpcm.asm` - DPCM definitions, if needed (must place at $C000 onwards)
   - `tambo_static.asm` - track/SFX counts and pointers
   - `tambo_sfx.asm` - SFX data (must place at $8000 onwards)
@@ -69,6 +69,7 @@ Just `.include` the files at the appropriate places within a project and it shou
 The SFX slot is automatically picked between 0 or 1. Priority in order of highest to lowest:
 1. The first slot using the same channel as the new SFX, starting at slot 0
 2. The first free slot, starting at slot 0
+
 If neither condition is met, the SFX will not load.
 
 `jsr tambo_pauseTrack` pauses or resumes the currently playing track. A is clobbered, X/Y are preserved.

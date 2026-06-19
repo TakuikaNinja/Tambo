@@ -71,12 +71,16 @@ For commands other than `END` and `JUMP`, do *not* rely on the exact values defi
 
 `END` is defined as 0x00 in the low byte (0x??00), this ends channel processing but does not mute the channel.
 Channel muting be done manually within note data.
+
 This command is most often used to end playback for unused channels, or to end a non-looping track.
+
 
 
 `JUMP` is defined as 0xFF in the low byte (0x??FF), this jumps to a new location with pattern data.
 Example: `.word CMD::JUMP, new_pattern`
+
 This command is most often used for infinite loops.
+
 
 
 `TRANSPOSE` adds a signed 7-bit offset to the channel's running transposition. The offset is specified in the high byte, yielding a -64 to +63 semitone range.
@@ -89,6 +93,7 @@ Examples:
 - `.word CMD::TRANSPOSE | (3 << 8) ; +3 semitones`
 
 This command is most often used for transposing triangle bass patterns.
+
 
 
 `SET_LOOP1/2` sets that channel's loop counter: `.word CMD::SET_LOOP | (loop_count << 8)`
@@ -132,22 +137,33 @@ nested_example:
 
 ### Note Data
 
-Each pattern may contain an arbitrary number of notes. A note is defined as the following: `duration (1-255), register 0, register 1, register 2, register 3`
+Each pattern may contain an arbitrary number of notes. A note is defined as the following: 
+
+`duration (1-255), register 0, register 1, register 2, register 3`
 
 Note durations are counted in units of the speed setting defined by the track header. A duration of 0 terminates the pattern.
 
 #### Channel-specific Register Handling
 
 For pulse & triangle, register 2 contains the note lookup value: `.byte 4, $80, $83, CS3, $07 << 3`
-`tambo_includes.asm` provides constants for note indicies. Supported notes are `A0` to `B7`, `CUT` (mute channel), and `REST` (read values but don't write to the registers).
-Important: The note lookup assumes that register 3 (length counter) contains all 0s in the lowest 3 bits, hence the use of `<< 3` for length counter values.
+- `tambo_includes.asm` provides constants for note indicies. Supported notes are `A0` to `B7`, `CUT` (mute channel), and `REST` (read values but don't write to the registers).
+- **Important**: The note lookup assumes that register 3 (length counter) contains all 0s in the lowest 3 bits, hence the use of `<< 3` for length counter values.
 
-For triangle, register 1 is used as a flag to enable automatic linear counter trill: `.byte 2, $03, $01, A3, $01 << 3 ; $4009 != 0: auto linear counter trill (only useful with reload values 1-3)`
+
+For triangle, register 1 is used as a flag to enable automatic linear counter trill: 
+
+`.byte 2, $03, $01, A3, $01 << 3 ; $4009 != 0: auto linear counter trill (only useful with reload values 1-3)`
+
 Enabling auto linear counter trill on `REST` notes is undefined behaviour.
+
 
 Noise has no special handling of the register values. (register 1 is unused)
 
-For DMC, setting register 0 to values >= 0x80 will mute the channel instead of enabling DMC IRQs: `.byte 1, $80, $00, $00, $00 ; mute channel by setting $4010.D7`
+
+For DMC, setting register 0 to values >= 0x80 will mute the channel instead of enabling DMC IRQs: 
+
+`.byte 1, $80, $00, $00, $00 ; mute channel by setting $4010.D7`
+
 Additionally, register 1 will only be written to $4011 (direct load) if the value is < 0x80, and skipped otherwise. (This handling is equivalent to the "D-counter" setting in FamiTracker, where a value of "Off" skips the direct load.)
 
 ## SFX Data
