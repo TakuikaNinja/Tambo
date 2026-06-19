@@ -25,6 +25,10 @@
 
 .segment "CODE"
 
+tambo_samples_start:
+.include "Songs/tambo_samples.asm"
+.out .sprintf ("\nDPCM samples: %d bytes\n", *-tambo_samples_start)
+
 Reset:
 		sei
 		cld
@@ -379,6 +383,8 @@ HandleGameMode:
 	.out .sprintf ("Music data (Test song): %d bytes", *-testsong_header)
 	.include "Songs/apu_dance.asm"
 	.out .sprintf ("Music data (APU Dance): %d bytes", *-apu_dance_header)
+	.include "Songs/hiscore_party.asm"
+	.out .sprintf ("Music data (Hi-Score Party): %d bytes", *-hiscore_party_header)
 	.include "Songs/tambo_sfx.asm"
 	.out .sprintf ("SFX data: %d bytes", *-sfx_start)
 	.out .sprintf ("Total sound data: %d bytes\n", *-tambo_maxTracks)

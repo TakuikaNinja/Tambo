@@ -1,13 +1,15 @@
 tambo_maxTracks:
-	.byte 2
+	.byte 3
 tambo_maxSFX:
 	.byte 3
 
 trackHeaders_Lo:
+	.byte <hiscore_party_header
 	.byte <apu_dance_header
 	.byte <testsong_header
 
 trackHeaders_Hi:
+	.byte >hiscore_party_header
 	.byte >apu_dance_header
 	.byte >testsong_header
 
