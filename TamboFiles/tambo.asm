@@ -27,8 +27,20 @@ periodTableHi:
 ; DenDy = use note lookup as-is, tempo 125
 tambo_noteAdjustments:
 	.byte 0, 1, 0
+
+; driver tick rates
 tambo_tickRates:
 	.byte 150, 125, 125
+
+; pre-compute the tempo divmod result after 1 tick (marginally faster)
+tambo_tickRates_Div:
+	.byte <(TEMPO / 150)
+	.byte <(TEMPO / 125)
+	.byte <(TEMPO / 125)
+tambo_tickRates_Mod:
+	.byte <(TEMPO .MOD 150)
+	.byte <(TEMPO .MOD 125)
+	.byte <(TEMPO .MOD 125)
 
 ; APU init code based on https://www.nesdev.org/wiki/APU_basics#Register_initialization
 tambo_registerInitTable:
@@ -381,29 +393,22 @@ updateSFX:
 		jsr tambo_writeSFX
 
 tambo_tickCounters:
-		ldy soundRegion
-		lda tambo_tickRates,y
-		sta tamboTemp
-		
 		bit tamboPauseStatus
 		bmi tickSFXCounters
 		lda speedSetting ; 0 usually means we haven't called playTrack yet
 		beq tickSFXCounters
 		
-		ldy #$00
+		ldy soundRegion
 		lda tickCounter
 		clc
-		adc #TEMPO
-		bcc @checkTempoMod
-@tempoModLoop:
-		sbc tamboTemp
-		iny
-@checkTempoMod:
-		cmp tamboTemp
-		bcs @tempoModLoop
+		adc tambo_tickRates_Mod,y
+		cmp tambo_tickRates,y
+		bcc @noMod
+		sbc tambo_tickRates,y ; carry already set, will set carry
+@noMod:
 		sta tickCounter
-		tya
-		adc speedCounter ; carry always clear
+		lda tambo_tickRates_Div,y
+		adc speedCounter ; carry set for +1 if extra subtraction occurred
 		ldy #$00
 		bcc @checkSpeedMod
 @speedModLoop:
@@ -429,27 +434,23 @@ tickSFXCounters:
 		jsr tickSFXCounter
 		dex ; fall through to tick slot 0
 
-; SFX durations are treated as speed 1 rows
 tickSFXCounter:
 		lda sfxChannelIndexes,x
 		bmi @skip ; skip if free slot
 		lda sfxSpeedSettings,x
 		beq @skip ; in case the speed was somehow set to 0
 		
-		ldy #$00
+		ldy soundRegion
 		lda sfxTickCounters,x
 		clc
-		adc #TEMPO
-		bcc @checkTempoMod
-@tempoModLoop:
-		sbc tamboTemp ; still contains the region tick rate
-		iny
-@checkTempoMod:
-		cmp tamboTemp
-		bcs @tempoModLoop
+		adc tambo_tickRates_Mod,y
+		cmp tambo_tickRates,y
+		bcc @noMod
+		sbc tambo_tickRates,y
+@noMod:
 		sta sfxTickCounters,x
-		tya
-		adc sfxSpeedCounters,x ; carry always clear
+		lda tambo_tickRates_Div,y
+		adc sfxSpeedCounters,x ; carry set for +1 if extra subtraction occurred
 		ldy #$00
 		bcc @checkSpeedMod
 @speedModLoop:
@@ -758,7 +759,7 @@ tambo_writeSFX:
 		sta channelIndex ; music has finished using this
 		bmi @skip ; skip if slot is free
 		
-		ldy #$ff
+		ldy #$ff ; used for ticking APU frame counter
 		txa
 		asl a
 		asl a
