@@ -101,6 +101,7 @@ A simple `make` should then work. RAM/ROM usage is logged during the process.
 ## Acknowledgements
 
 - This dumb driver idea would not have happened without the catchy tunes from early first-party titles composed by Hip Tanaka and Yukio Kaneoka.
+- SupperTails66's soundtrack for Layla - The Iris Missions was also particularly influential in terms of sound design.
 - The pattern parsing and pitch/tempo implementation was inspired by [Sabre](https://github.com/CutterCross/Sabre).
   - Its replayer was also used as a baseline for performance testing.
 - `Jroatch-chr-sheet.chr` was converted from the following placeholder CHR sheet: https://www.nesdev.org/wiki/File:Jroatch-chr-sheet.chr.png
