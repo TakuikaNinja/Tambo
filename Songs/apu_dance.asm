@@ -280,19 +280,16 @@ apu_dance_triangle_A:
 	.word apu_dance_triangle_pattern0
 	.word apu_dance_triangle_pattern2
 	
-	.word CMD::TRANSPOSE | (2 << 8) ; +2 semitones
-	.word CMD::SET_LOOP1 | (3 << 8)
+	.word CMD::TRANSPOSE | (4 << 8) ; +4 semitones
+	.word CMD::SET_LOOP1 | (1 << 8)
 apu_dance_triangle_B:
-	.word apu_dance_triangle_pattern0
-	.word apu_dance_triangle_pattern1
-	.word CMD::LOOP_JUMP1, apu_dance_triangle_B
 	.word CMD::TRANSPOSE | ((128 - 2) << 8) ; -2 semitones
-	
-	.word CMD::SET_LOOP1 | (3 << 8)
-apu_dance_triangle_C:
+	.word CMD::SET_LOOP2 | (3 << 8)
+@inner:
 	.word apu_dance_triangle_pattern0
 	.word apu_dance_triangle_pattern1
-	.word CMD::LOOP_JUMP1, apu_dance_triangle_C
+	.word CMD::LOOP_JUMP2, @inner
+	.word CMD::LOOP_JUMP1, apu_dance_triangle_B
 	
 	.word CMD::JUMP, apu_dance_triangle
 
