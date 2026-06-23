@@ -80,7 +80,7 @@ Note that SFX will be stopped entirely when pausing the track. If you wish to pl
 
 ## Sound Format
 
-See `FORMAT.md` (TODO) and/or the demo files in `Songs`.
+See `FORMAT.md` and/or the demo files in `Songs`.
 
 ## Replayer
 
