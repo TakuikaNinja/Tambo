@@ -273,29 +273,137 @@ tambo_soundUpdate:
 		bmi parseSFX
 		lda speedSetting ; 0 usually means we haven't called playTrack yet
 		beq parseSFX
-@runSound:
+
+parseChannels:
 		ldx #$04
 		stx channelIndex
 @channelParseLoop:
-		jsr tambo_readNote
 		ldx channelIndex
-		lda channelKeyOn,x
-		beq @noHandler
-		cpx #$3
-		bcs @noHandler
+		lda channelNoteCounters,x ; wait until counter becomes 0
+		beq @checkNotePointer
+		bne @noLookup
+
+@refetchPatternThenNote:
+		jsr tambo_readPattern
+
+@checkNotePointer:
+		lda channelNotePointers_Hi,x ; (avoid reading a stale pattern command)
+		bpl @noLookup
+
+@fetchNote:
+		lda channelNotePointers_Lo,x
+		sta pointer16
+		lda channelNotePointers_Hi,x
+		sta pointer16+1
+		ldy #$00
+		lda (pointer16),y ; note duration
+		beq @refetchPatternThenNote ; if duration is 0, read the next pattern
+
+@newNote:
+		sta channelNoteCounters,x
+
+		; copy the next 4 bytes into the APU reg mirrors
+		txa
+		asl a ; channelIndex x 4
+		asl a
+		tax
+@rowReadLoop:
+		iny
+		lda (pointer16),y
+		sta apuMirrors,x
+		inx
+		cpy #4
+		bcc @rowReadLoop
 		
-		jsr noteLookup
+		; add Y+1 to pointer so it points to the next note
+		ldx channelIndex
+		tya
+		adc pointer16 ; carry already set
+		sta channelNotePointers_Lo,x
+		bcc @noCarry
+		inc channelNotePointers_Hi,x
+@noCarry:
+		inc channelKeyOn,x ; signal key on
+		cpx #$3 ; pulse/triangle?
+		bcs @noLookup
+		jsr noteLookup ; pulse/triangle need note lookup
 		
-@noHandler:
+@noLookup:
 		dec channelIndex
 		bpl @channelParseLoop
 		
 parseSFX:
 		lda #$01
 		sta sfxSlot
-		jsr tambo_readSFX
+@sfxLoop:
+		ldx sfxSlot
+		lda sfxChannelIndexes,x
+		bmi @noSFX ; skip if slot is free
+		
+		sta channelIndex ; music has finished using this
+		lda sfxNoteCounters,x ; wait until counter becomes 0
+		bne @noSFX
+		
+		lda sfxPointers_Hi,x
+		bpl @noSFX ; (avoid using stale data)
+		
+		sta pointer16+1
+		lda sfxPointers_Lo,x
+		sta pointer16
+		ldy #$00
+		lda (pointer16),y ; duration
+		bne @loadRegs
+
+		ldx sfxSlot
+		lda #$ff
+		sta sfxChannelIndexes,x ; mark slot as clear
+		tya
+		ldx channelIndex
+		sta channelMuteStates,x ; clear channel mute state
+		bpl @noSFX ; [unconditional branch]
+
+@loadRegs:
+		sta sfxNoteCounters,x
+		txa
+		asl a
+		asl a
+		sta tamboTemp
+		tax
+@rowReadLoop:
+		iny
+		lda (pointer16),y
+		sta sfxMirrors,x
+		inx
+		cpy #$04
+		bcc @rowReadLoop
+		
+		; add Y+1 to pointer so it points to the next note
+		ldx sfxSlot
+		tya
+		adc pointer16 ; carry already set
+		sta sfxPointers_Lo,x
+		bcc @noCarry
+		inc sfxPointers_Hi,x
+@noCarry:
+		inc sfxKeyOn,x ; key-on
+		
+		ldy channelIndex
+		lda #$01
+		sta channelMuteStates,y ; mute music channel
+		
+		cpy #$03 ; pulse/triangle?
+		bcs @noSFX
+		
+		; set up channelIndex so we can reuse the note lookup routine
+		txa
+		adc #5 ; carry already clear
+		sta channelIndex ; treat SFX slots 0-1 as channel indexes 5-6
+		tax
+		jsr noteLookup
+		
+@noSFX:
 		dec sfxSlot
-		jsr tambo_readSFX
+		bpl @sfxLoop
 		
 tambo_updateAPU:
 		ldx #$ff ; manually tick APU frame counter to skip the 5th step
@@ -564,122 +672,6 @@ patternCommand:
 		sta channelPatternPointers_Hi,x
 		; then read the new pattern
 		jmp tambo_readPattern
-
-tambo_readNote:
-		ldx channelIndex
-		lda channelNoteCounters,x ; wait until counter becomes 0
-		beq @checkNotePointer
-@noNewNote:
-		rts
-
-@refetchPatternThenNote:
-		jsr tambo_readPattern
-
-@checkNotePointer:
-		lda channelNotePointers_Hi,x ; (avoid reading a stale pattern command)
-		bpl @noNewNote
-
-@fetchNote:
-		lda channelNotePointers_Lo,x
-		sta pointer16
-		lda channelNotePointers_Hi,x
-		sta pointer16+1
-		ldy #$00
-		lda (pointer16),y ; note duration
-		beq @refetchPatternThenNote ; if duration is 0, read the next pattern
-
-@newNote:
-		sta channelNoteCounters,x
-
-		; copy the next 4 bytes into the APU reg mirrors
-		txa
-		asl a ; channelIndex x 4
-		asl a
-		tax
-@rowReadLoop:
-		iny
-		lda (pointer16),y
-		sta apuMirrors,x
-		inx
-		cpy #4
-		bcc @rowReadLoop
-		
-		; add Y+1 to pointer so it points to the next note
-		ldx channelIndex
-		tya
-		adc pointer16 ; carry already set
-		sta channelNotePointers_Lo,x
-		bcc @noCarry
-		inc channelNotePointers_Hi,x
-@noCarry:
-		inc channelKeyOn,x ; signal key on
-noSFX:
-		rts
-
-tambo_readSFX:
-		ldx sfxSlot
-		lda sfxChannelIndexes,x
-		bmi noSFX ; skip if slot is free
-		
-		sta channelIndex ; music has finished using this
-		lda sfxNoteCounters,x ; wait until counter becomes 0
-		bne noSFX
-		
-		lda sfxPointers_Hi,x
-		bpl noSFX ; (avoid using stale data)
-		
-		sta pointer16+1
-		lda sfxPointers_Lo,x
-		sta pointer16
-		ldy #$00
-		lda (pointer16),y ; duration
-		bne @loadRegs
-
-		ldx sfxSlot
-		lda #$ff
-		sta sfxChannelIndexes,x ; mark slot as clear
-		tya
-		ldx channelIndex
-		sta channelMuteStates,x ; clear channel mute state
-		rts
-
-@loadRegs:
-		sta sfxNoteCounters,x
-		txa
-		asl a
-		asl a
-		sta tamboTemp
-		tax
-@rowReadLoop:
-		iny
-		lda (pointer16),y
-		sta sfxMirrors,x
-		inx
-		cpy #$04
-		bcc @rowReadLoop
-		
-		; add Y+1 to pointer so it points to the next note
-		ldx sfxSlot
-		tya
-		adc pointer16 ; carry already set
-		sta sfxPointers_Lo,x
-		bcc @noCarry
-		inc sfxPointers_Hi,x
-@noCarry:
-		inc sfxKeyOn,x ; key-on
-		
-		ldy channelIndex
-		lda #$01
-		sta channelMuteStates,y ; mute music channel
-		
-		cpy #$03
-		bcs noSFX
-		
-		; set up channelIndex so we can reuse the note lookup routine
-		txa
-		adc #5 ; carry already clear
-		sta channelIndex ; treat SFX slots 0-1 as channel indexes 5-6
-		tax
 		
 ; note lookup for pulse/triangle
 noteLookup:
