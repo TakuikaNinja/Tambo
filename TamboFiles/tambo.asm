@@ -259,7 +259,10 @@ tambo_playTrack:
 		cpx #$05
 		bne @headerLoadLoop
 
+		lda #$0f
+		sta $4015 ; mute DMC
 		lda #$00
+		sta $4011 ; reset DMC level
 		sta tamboPauseStatus
 pullXY:
 		pla

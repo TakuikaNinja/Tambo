@@ -82,6 +82,7 @@ Reset:
 		sta $00,x
 		sta $0100,x
 		sta $0200,x
+		dec $0200,x ; offscreen values
 		sta $0300,x
 		sta $0400,x
 		sta $0500,x
@@ -134,7 +135,7 @@ NMI:
 		pha
 		
 		bit NMISoftDisable
-		bmi @soundOnly
+		bmi @skipNMI
 		
 		lda NMIReady
 		beq @setScroll
@@ -156,30 +157,32 @@ NMI:
 		sta PPU_CTRL
 
 ; raster time display using grayscale mode
-; but delay until around visible scanline 32 first
-@soundOnly:
+; but delay until we get a sprite 0 hit
+		bit SkipSound
+		bmi @skipNMI
 		ldx PPU_MASK_MIRROR
 		inx
 		ldy soundRegion
 		lda RasterDelays,y
 		tay
+@sprite0Wait1:
+		bit PPU_STATUS
+		bvs @sprite0Wait1
+@sprite0Wait2:
+		bit PPU_STATUS
+		bvc @sprite0Wait2
 @delay:
 		brk #$00 ; 13 cycles for each BRK+RTI
-		brk #$00
-		brk #$00
-		brk #$00
-		brk #$00
 		dey
 		bne @delay
 		stx PPU_MASK
-
 		; run sound driver
 		jsr tambo_soundUpdate
 
 ; restore state
 		lda PPU_MASK_MIRROR
 		sta PPU_MASK
-		
+@skipNMI:
 		pla
 		tay
 		pla
@@ -188,9 +191,8 @@ NMI:
 IRQ:
 		rti
 
-; approximate delays to start at visible scanline 32
 RasterDelays:
-	.byte $49, $90, $49
+	.byte $15, $13, $15
 
 HandleControllersAndPPU:
 		lda soundRegion
@@ -314,39 +316,46 @@ InitNametables:
 		bne @fillLoop
 		rts
 
-InitPalettes:
-		lda #$3f
-		sta vram_buffer
-		lda #$00
-		sta vram_buffer+1
-		lda #(%01000000 | 32) ; fill 32 bytes
-		sta vram_buffer+2
-		lda #$0f
-		sta vram_buffer+3
-		lda #$ff
-		sta vram_buffer+4
-		inc NeedDraw
-		rts
-
 HandleGameMode:
 		lda Mode
-		bne :+
-		jsr InitPalettes
-		lda #%00001010 ; enable BG rendering
+		bne @handleInputs
+		
+		ldy #$80
+		sty SkipSound ; don't want sound driver + raster display yet
+		jsr InitSprites
+		
+		; init screen
+		ldx #$00
+@loop:
+		lda ScreenData,x
+		sta vram_buffer,x
+		inx
+		cpx #ScreenDataSize
+		bcc @loop
+		
+		jsr WaitForNMI
+		sty NMISoftDisable
+		inc NeedDraw
+		jsr TransferVRAM ; bulk transfer
+		
+		lda #%00011110 ; enable rendering
 		sta PPU_MASK_MIRROR
 		inc NeedPPUMask
+		asl NMISoftDisable
+		jsr WaitForNMI ; update PPU_MASK & let sprite evaluation occur
+		
 		inc Mode
 		lda #$00
+		sta SkipSound
+		sta selectedTrack
 		sta currentTrack
-		jsr tambo_playTrack
-:
+		jmp tambo_playTrack
+
+@handleInputs:
 		lda P1_PRESSED
 		and #(BUTTON_LEFT | BUTTON_RIGHT)
 		beq :+
-		lda currentTrack
-		eor #1
-		sta currentTrack
-		jsr tambo_playTrack
+		jsr SelectTrack
 :
 		lda P1_PRESSED
 		and #BUTTON_SELECT
@@ -373,6 +382,49 @@ HandleGameMode:
 		jsr tambo_playSFX
 :
 		rts
+
+SelectTrack:	
+		cmp #BUTTON_LEFT
+		bne @checkRight
+		ldy selectedTrack
+		bne @decrement
+		ldy tambo_maxTracks
+@decrement:
+		dey
+@checkRight:
+		cmp #BUTTON_RIGHT
+		bne @playTrack
+		ldy selectedTrack
+		iny
+		cpy tambo_maxTracks
+		bcc @playTrack
+		ldy #$00
+@playTrack:
+		sty selectedTrack
+		sty currentTrack
+		jmp tambo_playTrack
+
+InitSprites:
+		lda #83
+		sta oam ; Y
+		lda #$81
+		sta oam+1 ; tile
+		lda #0
+		sta oam+2 ; attributes
+		lda #176
+		sta oam+3 ; X
+		rts
+		
+
+ScreenData:
+	.dbyt $3f00
+	.byte 32
+	.repeat 8
+	.byte $0f, $00, $10, $20
+	.endrepeat
+	.incbin "Screens/screen.nam.out"
+	ScreenDataSize = *-ScreenData
+
 
 	.include "TamboFiles/tambo.asm"
 	.out .sprintf ("Tambo driver: %d bytes", *-periodTableLo)

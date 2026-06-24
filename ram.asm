@@ -4,6 +4,7 @@
 .segment "ZEROPAGE"
 	temp: .res 16 ; temp memory
 	NMISoftDisable: .res 1
+	SkipSound: .res 1
 	NMIReady: .res 1
 	NeedDraw: .res 1
 	NeedPPUMask: .res 1
@@ -11,6 +12,7 @@
 	PPU_CTRL_MIRROR: .res 1
 	Mode: .res 1
 	Buttons: .res 4
+	selectedTrack: .res 1
 	
 	.include "TamboFiles/tambo_ZP_RAM.asm"
 	.out .sprintf ("\nTambo ZP: %d bytes", *-soundRegion)

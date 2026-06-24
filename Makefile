@@ -14,7 +14,11 @@ $(GAME).nes: $(OBJ_FILES) nes.cfg
 clean:
 	rm -f *.o *.nes *.dbg *.nl *.map.txt *.labels.txt
 
-$(OBJ_FILES): $(wildcard *.asm) $(wildcard TamboFiles/*.asm) $(wildcard Songs/*.asm) Jroatch-chr-sheet.chr
+$(OBJ_FILES): $(wildcard *.asm) $(wildcard TamboFiles/*.asm) $(wildcard Songs/*.asm) Jroatch-chr-sheet.chr Screens/screen.nam.out
 
 %.o:%.asm
 	$(ASSEMBLER) $< -g -o $@
+
+Screens/screen.nam.out: Screens/screen.nam
+	go run Screens/vramstruct.go Screens/screen.nam 2000 00
+
