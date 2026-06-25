@@ -383,10 +383,11 @@ HandleGameMode:
 :
 		rts
 
-SelectTrack:	
+SelectTrack:
+		ldy selectedTrack
 		cmp #BUTTON_LEFT
 		bne @checkRight
-		ldy selectedTrack
+		cpy #$00
 		bne @decrement
 		ldy tambo_maxTracks
 @decrement:
@@ -394,7 +395,6 @@ SelectTrack:
 @checkRight:
 		cmp #BUTTON_RIGHT
 		bne @playTrack
-		ldy selectedTrack
 		iny
 		cpy tambo_maxTracks
 		bcc @playTrack
