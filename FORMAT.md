@@ -164,7 +164,7 @@ For DMC, setting register 0 to values >= 0x80 will mute the channel instead of e
 
 `.byte 1, $80, $00, $00, $00 ; mute channel by setting $4010.D7`
 
-Additionally, register 1 will only be written to $4011 (direct load) if the value is < 0x80, and skipped otherwise. (This handling is equivalent to the "D-counter" setting in FamiTracker, where a value of "Off" skips the direct load.)
+Additionally, register 1 will only be written to $4011 (direct load) if the value is < 0x80, and skipped otherwise. This still works when muting the channel. (This handling is equivalent to the "D-counter" or Zxx setting in FamiTracker, where a value of "Off" skips the direct load.)
 
 ## SFX Data
 

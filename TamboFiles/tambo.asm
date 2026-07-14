@@ -481,13 +481,13 @@ updateDMC:
 		bne updateSFX
 		lda #$0f ; preemptively mute DMC
 		sta $4015
-		lda dmcMirrors
-		bmi tambo_tickCounters ; bit 7 set = keep DMC muted
-		sta $4010
 		lda dmcMirrors+1
 		bmi @skipDirectLoad ; bit 7 set = skip direct load
 		sta $4011
 @skipDirectLoad:
+		lda dmcMirrors
+		bmi tambo_tickCounters ; bit 7 set = keep DMC muted
+		sta $4010
 		lda dmcMirrors+2
 		sta $4012
 		lda dmcMirrors+3
@@ -861,13 +861,13 @@ dmcHandler:
 		ldx tamboTemp
 		lda #$0f ; preemptively mute DMC
 		sta $4015
-		lda sfxMirrors,x
-		bmi @skip ; bit 7 set = keep DMC muted
-		sta $4010
 		lda sfxMirrors+1,x
 		bmi @skipDirectLoad ; bit 7 set = skip direct load
 		sta $4011
 @skipDirectLoad:
+		lda sfxMirrors,x
+		bmi @skip ; bit 7 set = keep DMC muted
+		sta $4010
 		lda sfxMirrors+2,x
 		sta $4012
 		lda sfxMirrors+3,x
