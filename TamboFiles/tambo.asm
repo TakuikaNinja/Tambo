@@ -140,10 +140,12 @@ initSFXSlot:
 		lda #$00
 		sta sfxPointers_Lo,x
 		sta sfxPointers_Hi,x
-		sta sfxTransposition,x
-		sta sfxNoteCounters,x
-		sta sfxTickCounters,x
 		sta sfxSpeedSettings,x
+initSFXVars:
+		sta sfxKeyOn,x
+		sta sfxNoteCounters,x
+		sta sfxTransposition,x
+		sta sfxTickCounters,x
 		sta sfxSpeedCounters,x
 		rts
 
@@ -159,9 +161,7 @@ tambo_playSFX:
 		pha
 		ldy currentSFX
 		cpy tambo_maxSFX
-		bcc @checkChannelIndex
-@invalid:
-		jmp pullXY
+		bcs @done
 		
 @checkChannelIndex:
 		lda sfxHeaders_Lo,y
@@ -171,7 +171,7 @@ tambo_playSFX:
 		ldy #$00
 		lda (pointer16),y ; channel index
 		cmp #$05
-		bcs @invalid
+		bcs @done
 		
 		; load to the first SFX slot already using that channel,
 		; otherwise pick the first free slot
@@ -188,7 +188,7 @@ tambo_playSFX:
 		bmi @checkSpeed ; slot 0 free
 		inx
 		bit sfxChannelIndexes+1
-		bpl @invalid ; slot 1 not free either? give up
+		bpl @done ; slot 1 not free either? give up
 
 @checkSpeed:
 		pha
@@ -196,6 +196,7 @@ tambo_playSFX:
 		lda (pointer16),y ; speed setting
 		bne @loadSFX
 		pla
+@done:
 		jmp pullXY ; reject if speed = 0
 
 @loadSFX:
@@ -203,12 +204,6 @@ tambo_playSFX:
 		sta sfxSpeedSettings,x
 		pla
 		sta sfxChannelIndexes,x
-		lda #$00
-		sta sfxTransposition,x
-		sta sfxNoteCounters,x
-		sta sfxKeyOn,x
-		sta sfxTickCounters,x
-		sta sfxSpeedCounters,x
 		tya ; add Y+1 to pointer to point to start of SFX notes
 		sec
 		adc pointer16
@@ -216,7 +211,9 @@ tambo_playSFX:
 		lda pointer16+1
 		adc #$00
 		sta sfxPointers_Hi,x
-		jmp pullXY
+		lda #$00
+		jsr initSFXVars ; init remaining variables
+		beq @done ; [unconditional branch]
 
 ; track will not load if:
 ; - currentTrack >= [tambo_maxTracks]
@@ -232,13 +229,12 @@ tambo_playTrack:
 
 		; if valid, load the initial pattern pointers from the header
 		jsr tambo_initRAM
+		tax ; already 0
 		lda trackHeaders_Lo,y
 		sta pointer16
 		lda trackHeaders_Hi,y
 		sta pointer16+1
-		lda #$00
-		tax
-		tay
+		ldy #$00
 		lda (pointer16),y ; speed setting
 		beq pullXY ; reject if speed = 0
 		sta speedSetting

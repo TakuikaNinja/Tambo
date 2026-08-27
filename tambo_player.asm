@@ -356,6 +356,7 @@ HandleGameMode:
 		and #(BUTTON_LEFT | BUTTON_RIGHT)
 		beq :+
 		jsr SelectTrack
+		jsr tambo_playTrack
 :
 		lda P1_PRESSED
 		and #BUTTON_SELECT
@@ -402,7 +403,7 @@ SelectTrack:
 @playTrack:
 		sty selectedTrack
 		sty currentTrack
-		jmp tambo_playTrack
+		rts
 
 InitSprites:
 		lda #83
