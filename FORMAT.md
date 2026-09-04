@@ -70,7 +70,7 @@ For commands other than `END` and `JUMP`, do *not* rely on the exact values defi
 #### Command Specifications
 
 `END` is defined as 0x00 in the low byte (0x??00), this ends channel processing but does not mute the channel.
-Channel muting be done manually within note data.
+Channel muting must be done manually within the note data.
 
 This command is most often used to end playback for unused channels, or to end a non-looping track.
 
