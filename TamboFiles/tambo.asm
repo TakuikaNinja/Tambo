@@ -115,6 +115,9 @@ tambo_initAPU:
 		
 tambo_initRAM:
 		lda #$00
+		sta speedSetting ; clear this ASAP so interruptions cause fewer problems
+		sta tickCounter
+		sta speedCounter
 		ldx #$04
 @loop:
 		sta channelKeyOn,x
@@ -124,9 +127,6 @@ tambo_initRAM:
 		sta channelTransposition,x
 		dex
 		bpl @loop
-		sta tickCounter
-		sta speedCounter
-		sta speedSetting
  		rts
 
 initSFX:
@@ -229,7 +229,6 @@ tambo_playTrack:
 
 		; if valid, load the initial pattern pointers from the header
 		jsr tambo_initRAM
-		tax ; already 0
 		lda trackHeaders_Lo,y
 		sta pointer16
 		lda trackHeaders_Hi,y
@@ -237,9 +236,10 @@ tambo_playTrack:
 		ldy #$00
 		lda (pointer16),y ; speed setting
 		beq pullXY ; reject if speed = 0
-		sta speedSetting
-		
+		pha ; stash it while we set up the pointers
+		; (if a sound update call interrupts this, the music part will bail due to speedSetting == 0)
 @headerLoadLoop:
+		inx ; always starts with X = $FF from tambo_initRAM
 		iny
 		lda (pointer16),y
 		sta channelPatternPointers_Lo,x
@@ -251,8 +251,7 @@ tambo_playTrack:
 		sta channelNotePointers_Lo,x
 		lda #>ALWAYS_ZERO
 		sta channelNotePointers_Hi,x
-		inx
-		cpx #$05
+		cpx #$04
 		bne @headerLoadLoop
 
 		lda #$0f
@@ -260,6 +259,8 @@ tambo_playTrack:
 		lda #$00
 		sta $4011 ; reset DMC level
 		sta tamboPauseStatus
+		pla
+		sta speedSetting ; everything's set up now, so set the speed setting we fetched earlier
 pullXY:
 		pla
 		tay
