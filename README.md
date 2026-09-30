@@ -4,6 +4,11 @@ Tambo (田んぼ, Japanese for rice field) is a sound driver for the NES/FC. The
 
 The idea came to be after composing [APU Dance](https://www.youtu.be/uk5kF894bVQ) in Dn-FamiTracker with hardware-driven sound design. This driver was developed with such limitations in mind, along with size reduction features not seen in popular homebrew sound drivers.
 
+## External Links
+
+- [Blog post](https://takuikaninja.github.io/2026/06/22/tambo-driver.html)
+- [NESdev forum thread](https://forums.nesdev.org/viewtopic.php?t=26679)
+
 ## Features
 
 - Up to 256 tracks and 256 SFX.
