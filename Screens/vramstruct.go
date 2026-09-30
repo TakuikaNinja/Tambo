@@ -9,15 +9,15 @@ go run vramstruct.go in_file ppu_dest [fill_tile]
 
 ppu_dest is a uint16 in hexadecimal format (0000-FFFF supported, 0000-3FFF typical)
 
-fill_tile is the fill value (00-FF), which will remove RLE chunks containing it
-(default = 0)
+fill_tile is an optional fill value (00-FF), which will remove RLE chunks containing it
+useful for scenarios where VRAM is initialised with a known value
 
 Limitatons:
 - +1 increment mode (going across) only
 - no substructures
 
 Examples:
-go run vramstruct.go intro.nam 2000
+go run vramstruct.go intro.nam 2000 00
 
 go run vramstruct.go tiles.chr 0000
 
@@ -40,15 +40,17 @@ func main() {
 	baseAddress, err := strconv.ParseUint(args[2], 16, 16)
 	checkError(err)
 	fillTile := byte(0)
+	removeFillTiles := false
 	if len(args) == 4 {
 		fillTileStr, err := strconv.ParseUint(args[3], 16, 8)
 		checkError(err)
 		fillTile = byte(fillTileStr)
+		removeFillTiles = true
 	}
 	inFile, err := os.ReadFile(filename)
 	checkError(err)
 	fmt.Printf("%s: %v bytes\n", filename, len(inFile))
-	outFile := Compress(inFile, uint16(baseAddress), fillTile)
+	outFile := Compress(inFile, uint16(baseAddress), removeFillTiles, fillTile)
 	err = os.WriteFile(filename + ".out", outFile, 0666)
 	checkError(err)
 	fmt.Printf("%s.out: %v bytes\n", filename, len(outFile))
@@ -69,7 +71,7 @@ func consecutive(data []byte, i int) int {
 	return min(count, 64)
 }
 
-func Compress(data []byte, baseAddress uint16, fillTile byte) []byte {
+func Compress(data []byte, baseAddress uint16, removeFillTiles bool, fillTile byte) []byte {
 	chunks := make([]Chunk, 0)
 	var chunk Chunk
 	address := baseAddress
@@ -104,8 +106,8 @@ func Compress(data []byte, baseAddress uint16, fillTile byte) []byte {
 	compressed := make([]byte, 0)
 	for _, chunk := range chunks {
 		//fmt.Printf("%#v\n", chunk)
-		// skip RLE chunks which only contain the fill tile
-		if !(chunk.Fill && chunk.Data[0] == fillTile) {
+		// if specified, skip RLE chunks which only contain the fill tile
+		if !removeFillTiles || !(chunk.Fill && chunk.Data[0] == fillTile) {
 			compressed = append(compressed, chunk.toBytes()...)
 		}
 	}

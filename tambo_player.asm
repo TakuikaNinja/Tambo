@@ -199,7 +199,9 @@ HandleControllersAndPPU:
 		cmp #REGION::PAL
 		bne NTSC_Handler
 
-; PAL needs OAM DMA first, don't need to worry about DMC controller conflicts
+; PAL needs OAM DMA done within the first 24 scanlines of vblank due to forced OAM refresh
+; VRAM transfers can also take advantage of the longer vblank this way
+; (don't need to worry about DMC controller conflicts)
 PAL_Handler:
 		lda #$00
 		sta PPU_OAM_ADDR
