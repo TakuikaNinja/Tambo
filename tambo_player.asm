@@ -327,25 +327,26 @@ HandleGameMode:
 		jsr InitSprites
 		
 		; init screen
-		ldx #$00
+		ldx #ScreenDataSize
 @loop:
-		lda ScreenData,x
-		sta vram_buffer,x
-		inx
-		cpx #ScreenDataSize
-		bcc @loop
+		lda ScreenData-1,x
+		sta vram_buffer-1,x
+		dex
+		bne @loop
 		
 		jsr WaitForNMI
 		sty NMISoftDisable
 		inc NeedDraw
 		jsr TransferVRAM ; bulk transfer
 		
-		lda #%00011110 ; enable rendering
+		lda #%00001010 ; hide sprites during initial evaluation
 		sta PPU_MASK_MIRROR
 		inc NeedPPUMask
 		asl NMISoftDisable
-		jsr WaitForNMI ; update PPU_MASK & let sprite evaluation occur
-		
+		jsr WaitForNMI ; let sprite evaluation occur
+		lda #%00011110 ; show sprites for future sprite 0 polling
+		sta PPU_MASK_MIRROR
+		inc NeedPPUMask
 		inc Mode
 		lda #$00
 		sta SkipSound
